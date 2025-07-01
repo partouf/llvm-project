@@ -151,6 +151,7 @@ private:
   unsigned OldLineLevel;
 };
 
+
 UnwrappedLineParser::UnwrappedLineParser(
     SourceManager &SourceMgr, const FormatStyle &Style,
     const AdditionalKeywords &Keywords, unsigned FirstStartColumn,
@@ -5196,9 +5197,6 @@ void UnwrappedLineParser::parsePascalProcedureDeclaration() {
   // Pascal procedure/function declarations
   assert(FormatTok->isOneOf(Keywords.kw_pascal_procedure, Keywords.kw_pascal_function));
   
-  // Save current level and preserve it (no level reset for Pascal procedures)
-  unsigned SavedLevel = Line->Level;
-  
   // Parse the entire declaration on one line
   while (FormatTok && !eof() && !FormatTok->is(tok::semi) && !FormatTok->is(Keywords.kw_pascal_begin)) {
     if (FormatTok->is(tok::l_paren)) {
@@ -5217,15 +5215,15 @@ void UnwrappedLineParser::parsePascalProcedureDeclaration() {
   // Parse procedure/function body if present
   if (FormatTok && FormatTok->is(Keywords.kw_pascal_begin)) {
     FormatTok->setFinalizedType(TT_PascalBegin);
+    
+    // Don't increment level before parseBlock - let parseBlock handle indentation
     parseBlock(/*MustBeDeclaration=*/false, /*AddLevels=*/1u, /*MunchSemi=*/false);
+    
     if (FormatTok && FormatTok->is(tok::semi)) {
       nextToken();
       addUnwrappedLine();
     }
   }
-  
-  // Restore the original level for subsequent parsing
-  Line->Level = SavedLevel;
 }
 
 void UnwrappedLineParser::parsePascalCaseStatement() {
