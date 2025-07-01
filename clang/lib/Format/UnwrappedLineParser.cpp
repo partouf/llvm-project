@@ -5196,6 +5196,10 @@ void UnwrappedLineParser::parsePascalProcedureDeclaration() {
   // Pascal procedure/function declarations
   assert(FormatTok->isOneOf(Keywords.kw_pascal_procedure, Keywords.kw_pascal_function));
   
+  // Save current level and ensure top-level procedures are at level 0
+  unsigned SavedLevel = Line->Level;
+  Line->Level = 0;
+  
   // Parse the entire declaration on one line
   while (FormatTok && !eof() && !FormatTok->is(tok::semi) && !FormatTok->is(Keywords.kw_pascal_begin)) {
     if (FormatTok->is(tok::l_paren)) {
@@ -5214,12 +5218,15 @@ void UnwrappedLineParser::parsePascalProcedureDeclaration() {
   // Parse procedure/function body if present
   if (FormatTok && FormatTok->is(Keywords.kw_pascal_begin)) {
     FormatTok->setFinalizedType(TT_PascalBegin);
-    parseBlock(/*MustBeDeclaration=*/false, /*AddLevels=*/0u);
+    parseBlock(/*MustBeDeclaration=*/false, /*AddLevels=*/1u, /*MunchSemi=*/false);
     if (FormatTok && FormatTok->is(tok::semi)) {
       nextToken();
       addUnwrappedLine();
     }
   }
+  
+  // Restore the original level for subsequent parsing
+  Line->Level = SavedLevel;
 }
 
 void UnwrappedLineParser::parsePascalCaseStatement() {
@@ -5302,7 +5309,7 @@ void UnwrappedLineParser::parsePascalTypeDeclaration() {
               nextToken();
               addUnwrappedLine();
             } else if (FormatTok->is(Keywords.kw_pascal_property)) {
-              // Property declarations with line breaks
+              // Property declarations with proper read/write clause indentation
               nextToken(); // 'property'
               if (FormatTok && FormatTok->is(tok::identifier))
                 nextToken(); // property name
@@ -5313,12 +5320,16 @@ void UnwrappedLineParser::parsePascalTypeDeclaration() {
               
               addUnwrappedLine(); // Break after property name: type
               
-              // Parse read/write clauses with indentation
-              while (FormatTok && !FormatTok->is(tok::semi) && 
-                     FormatTok->isOneOf(Keywords.kw_pascal_read, Keywords.kw_pascal_write)) {
-                nextToken(); // 'read' or 'write'
+              // Parse read/write clauses on indented lines
+              if (FormatTok && FormatTok->is(Keywords.kw_pascal_read)) {
+                nextToken(); // 'read'
                 if (FormatTok && FormatTok->is(tok::identifier))
                   nextToken(); // method name
+                if (FormatTok && FormatTok->is(Keywords.kw_pascal_write)) {
+                  nextToken(); // 'write'
+                  if (FormatTok && FormatTok->is(tok::identifier))
+                    nextToken(); // method name
+                }
               }
               
               if (FormatTok && FormatTok->is(tok::semi)) {
