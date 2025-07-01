@@ -5349,8 +5349,29 @@ void UnwrappedLineParser::parsePascalTypeDeclaration() {
       if (FormatTok && FormatTok->is(tok::equal)) {
         nextToken(); // skip '='
         
+        // Check for interface declaration
+        if (FormatTok && (FormatTok->is(Keywords.kw_pascal_interface) || 
+                          (Style.isPascal() && FormatTok->TokenText == "interface"))) {
+          nextToken(); // skip 'interface'
+          addUnwrappedLine(); // Break after interface declaration
+          
+          // Parse interface members with consistent indentation level
+          ++Line->Level; // Increase level for interface content
+          while (FormatTok && !eof() && !FormatTok->is(Keywords.kw_pascal_end)) {
+            parseStructuralElement();
+          }
+          --Line->Level; // Restore level after interface content
+          
+          // Parse 'end'
+          if (FormatTok && FormatTok->is(Keywords.kw_pascal_end)) {
+            nextToken();
+            if (FormatTok && FormatTok->is(tok::semi))
+              nextToken();
+            addUnwrappedLine();
+          }
+        }
         // Check for class declaration
-        if (FormatTok && FormatTok->is(Keywords.kw_pascal_class)) {
+        else if (FormatTok && FormatTok->is(Keywords.kw_pascal_class)) {
           nextToken(); // skip 'class'
           
           // Parse inheritance/interface list
@@ -5365,13 +5386,14 @@ void UnwrappedLineParser::parsePascalTypeDeclaration() {
           while (FormatTok && !eof() && !FormatTok->is(Keywords.kw_pascal_end)) {
             if (FormatTok->isOneOf(Keywords.kw_pascal_private, Keywords.kw_pascal_public,
                                    Keywords.kw_pascal_protected, Keywords.kw_pascal_published)) {
-              // Handle change of visibility level
+              // Handle change of visibility level  
               if (InVisibilitySection) {
                 --Line->Level; // Unindent from previous section members
               }
-              // Visibility sections on their own lines at class level
-              nextToken();
-              addUnwrappedLine();
+              // Ensure visibility sections start on new lines
+              addUnwrappedLine(); // Break before visibility keyword
+              nextToken(); // consume visibility keyword
+              addUnwrappedLine(); // Break after visibility keyword  
               ++Line->Level; // Indent members within visibility section
               InVisibilitySection = true;
             } else if (FormatTok->is(Keywords.kw_pascal_property)) {
