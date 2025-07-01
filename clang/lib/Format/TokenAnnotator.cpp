@@ -5769,6 +5769,12 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       return false;
     }
     
+    // Always break before Pascal visibility sections (private, public, etc.)
+    if (Right.isOneOf(Keywords.kw_pascal_private, Keywords.kw_pascal_public,
+                      Keywords.kw_pascal_protected, Keywords.kw_pascal_published)) {
+      return true;
+    }
+    
     // PHASE 3: Pascal inline variable break prevention
     // Never break between for/if and inline var
     if (Left.isOneOf(tok::kw_for, tok::kw_if) && 

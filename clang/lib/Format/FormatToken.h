@@ -235,6 +235,12 @@ namespace format {
   TYPE(PascalWithStatement)                                                    \
   /* Marks the components of a Pascal unit/program name */                     \
   TYPE(PascalUnitName)                                                         \
+  /* Pascal section markers like interface/implementation at column 0 */          \
+  TYPE(PascalSectionStart)                                                         \
+  /* Pascal type declaration marker */                                             \
+  TYPE(PascalTypeDeclaration)                                                      \
+  /* Pascal uses declaration marker */                                             \
+  TYPE(PascalUsesDeclaration)                                                      \
   TYPE(Unknown)
 
 /// Determines the semantic type of a syntactic token, e.g. whether "<" is a

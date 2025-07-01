@@ -211,6 +211,8 @@ private:
   void parsePascalVarDeclaration();
   void parsePascalProcedureDeclaration();
   void parsePascalCaseStatement();
+  void parsePascalTypeDeclaration();
+  void parsePascalUsesDeclaration();
 
   // Used by addUnwrappedLine to denote whether to keep or remove a level
   // when resetting the line state.

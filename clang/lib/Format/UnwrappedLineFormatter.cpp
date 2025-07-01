@@ -115,6 +115,15 @@ private:
     if (Style.isJava() || Style.isJavaScript() || Style.isCSharp())
       return 0;
     const auto &RootToken = *Line.First;
+    
+    // Pascal-specific indentation handling
+    if (Style.isPascal()) {
+      // interface/implementation sections should be at column 0
+      if (RootToken.isOneOf(Keywords.kw_pascal_interface, Keywords.kw_pascal_implementation)) {
+        return -static_cast<int>(Line.Level * Style.IndentWidth);
+      }
+    }
+    
     if (Line.Type == LT_AccessModifier ||
         RootToken.isAccessSpecifier(/*ColonRequired=*/false) ||
         RootToken.isObjCAccessSpecifier() ||

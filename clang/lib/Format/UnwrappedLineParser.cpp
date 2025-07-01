@@ -1481,9 +1481,35 @@ void UnwrappedLineParser::parseStructuralElement(
       addUnwrappedLine();
       return;
     }
+    // Handle Pascal interface/implementation sections (should not be indented)
+    if (FormatTok->is(Keywords.kw_pascal_interface) ||
+        FormatTok->is(Keywords.kw_pascal_implementation)) {
+      FormatTok->setFinalizedType(TT_PascalSectionStart);
+      nextToken();
+      addUnwrappedLine();
+      return;
+    }
     if (FormatTok->is(Keywords.kw_pascal_begin)) {
       FormatTok->setFinalizedType(TT_PascalBegin);
       parseBlock(/*MustBeDeclaration=*/false);
+      return;
+    }
+    // Handle Pascal type declarations 
+    if (FormatTok->is(Keywords.kw_pascal_type)) {
+      FormatTok->setFinalizedType(TT_PascalTypeDeclaration);
+      parsePascalTypeDeclaration();
+      return;
+    }
+    // Handle Pascal uses clauses
+    if (FormatTok->is(Keywords.kw_pascal_uses)) {
+      FormatTok->setFinalizedType(TT_PascalUsesDeclaration);
+      parsePascalUsesDeclaration();
+      return;
+    }
+    // Handle Pascal procedure/function declarations
+    if (FormatTok->isOneOf(Keywords.kw_pascal_procedure, Keywords.kw_pascal_function)) {
+      FormatTok->setFinalizedType(TT_PascalProcedureDeclaration);
+      parsePascalProcedureDeclaration();
       return;
     }
     // PHASE 2: Handle Pascal var keyword context-aware
@@ -1504,8 +1530,6 @@ void UnwrappedLineParser::parseStructuralElement(
       }
       // If it's just "var" text but not a Pascal keyword, fall through to default parsing
     }
-    // For now, just use default parsing for other Pascal constructs
-    // TODO: Re-enable specific Pascal parsing after debugging
   }
 
   // Tokens that only make sense at the beginning of a line.
@@ -5171,22 +5195,14 @@ void UnwrappedLineParser::parsePascalVarDeclaration() {
 void UnwrappedLineParser::parsePascalProcedureDeclaration() {
   // Pascal procedure/function declarations
   assert(FormatTok->isOneOf(Keywords.kw_pascal_procedure, Keywords.kw_pascal_function));
-  nextToken();
-
-  // Parse procedure/function name
-  if (FormatTok && FormatTok->is(tok::identifier))
-    nextToken();
-
-  // Parse parameter list
-  if (FormatTok && FormatTok->is(tok::l_paren))
-    parseParens();
-
-  // Parse function return type
-  if (FormatTok && FormatTok->is(tok::colon)) {
-    nextToken();
-    // Skip return type
-    while (FormatTok && !FormatTok->is(tok::semi) && !FormatTok->is(Keywords.kw_pascal_begin))
+  
+  // Parse the entire declaration on one line
+  while (FormatTok && !eof() && !FormatTok->is(tok::semi) && !FormatTok->is(Keywords.kw_pascal_begin)) {
+    if (FormatTok->is(tok::l_paren)) {
+      parseParens();
+    } else {
       nextToken();
+    }
   }
 
   // Parse semicolon after declaration
@@ -5248,6 +5264,134 @@ void UnwrappedLineParser::parsePascalCaseStatement() {
   }
 
   addUnwrappedLine();
+}
+
+void UnwrappedLineParser::parsePascalTypeDeclaration() {
+  // Pascal type declarations: type TMyClass = class(...) private ... end;
+  assert(FormatTok->is(Keywords.kw_pascal_type));
+  nextToken();
+  addUnwrappedLine();
+
+  // Parse type declarations until we hit a keyword that ends the section
+  while (FormatTok && !eof() &&
+         !FormatTok->isOneOf(Keywords.kw_pascal_var, Keywords.kw_pascal_const,
+                             Keywords.kw_pascal_procedure, Keywords.kw_pascal_function,
+                             Keywords.kw_pascal_implementation, Keywords.kw_pascal_begin)) {
+    if (FormatTok->is(tok::identifier)) {
+      // Parse type name
+      nextToken();
+      if (FormatTok && FormatTok->is(tok::equal)) {
+        nextToken(); // skip '='
+        
+        // Check for class declaration
+        if (FormatTok && FormatTok->is(Keywords.kw_pascal_class)) {
+          nextToken(); // skip 'class'
+          
+          // Parse inheritance/interface list
+          if (FormatTok && FormatTok->is(tok::l_paren)) {
+            parseParens();
+          }
+          
+          addUnwrappedLine(); // Break after class(...) declaration
+          
+          // Parse class members with proper indentation
+          while (FormatTok && !eof() && !FormatTok->is(Keywords.kw_pascal_end)) {
+            if (FormatTok->isOneOf(Keywords.kw_pascal_private, Keywords.kw_pascal_public,
+                                   Keywords.kw_pascal_protected, Keywords.kw_pascal_published)) {
+              // Visibility sections on their own lines
+              nextToken();
+              addUnwrappedLine();
+            } else if (FormatTok->is(Keywords.kw_pascal_property)) {
+              // Property declarations with line breaks
+              nextToken(); // 'property'
+              if (FormatTok && FormatTok->is(tok::identifier))
+                nextToken(); // property name
+              if (FormatTok && FormatTok->is(tok::colon))
+                nextToken(); // ':'
+              if (FormatTok && FormatTok->is(tok::identifier))
+                nextToken(); // type
+              
+              addUnwrappedLine(); // Break after property name: type
+              
+              // Parse read/write clauses with indentation
+              while (FormatTok && !FormatTok->is(tok::semi) && 
+                     FormatTok->isOneOf(Keywords.kw_pascal_read, Keywords.kw_pascal_write)) {
+                nextToken(); // 'read' or 'write'
+                if (FormatTok && FormatTok->is(tok::identifier))
+                  nextToken(); // method name
+              }
+              
+              if (FormatTok && FormatTok->is(tok::semi)) {
+                nextToken();
+                addUnwrappedLine();
+              }
+            } else {
+              // Other declarations (procedures, functions, fields)
+              parseStructuralElement();
+            }
+          }
+          
+          // Parse 'end'
+          if (FormatTok && FormatTok->is(Keywords.kw_pascal_end)) {
+            nextToken();
+            if (FormatTok && FormatTok->is(tok::semi))
+              nextToken();
+            addUnwrappedLine();
+          }
+        } else {
+          // Simple type declaration, skip to semicolon
+          while (FormatTok && !FormatTok->is(tok::semi))
+            nextToken();
+          if (FormatTok && FormatTok->is(tok::semi)) {
+            nextToken();
+            addUnwrappedLine();
+          }
+        }
+      }
+    } else {
+      nextToken();
+    }
+  }
+}
+
+void UnwrappedLineParser::parsePascalUsesDeclaration() {
+  // Pascal uses declarations: uses Unit1, Unit2.SubUnit, Unit3;
+  assert(FormatTok->is(Keywords.kw_pascal_uses));
+  nextToken();
+  addUnwrappedLine();
+
+  // Parse the list of units with proper indentation
+  while (FormatTok && !eof() && !FormatTok->is(tok::semi)) {
+    // Skip to next comma or semicolon
+    while (FormatTok && !FormatTok->isOneOf(tok::comma, tok::semi)) {
+      // Mark dotted unit names to prevent breaking
+      if (FormatTok->is(tok::identifier)) {
+        FormatTok->setFinalizedType(TT_PascalUnitName);
+        nextToken();
+        while (FormatTok && FormatTok->is(tok::period)) {
+          FormatTok->setFinalizedType(TT_PascalUnitName);
+          nextToken();
+          if (FormatTok && FormatTok->is(tok::identifier)) {
+            FormatTok->setFinalizedType(TT_PascalUnitName);
+            nextToken();
+          }
+        }
+      } else {
+        nextToken();
+      }
+    }
+    
+    if (FormatTok && FormatTok->is(tok::comma)) {
+      nextToken();
+      // Each unit on its own line with indentation
+      addUnwrappedLine();
+    }
+  }
+  
+  if (FormatTok && FormatTok->is(tok::semi)) {
+    nextToken();
+    addUnwrappedLine();
+  }
 }
 
 } // end namespace format
