@@ -1495,7 +1495,8 @@ void UnwrappedLineParser::parseStructuralElement(
     }
     // Handle Pascal interface/implementation sections (should not be indented)
     if (FormatTok->is(Keywords.kw_pascal_interface) ||
-        FormatTok->is(Keywords.kw_pascal_implementation)) {
+        FormatTok->is(Keywords.kw_pascal_implementation) ||
+        (Style.isPascal() && FormatTok->TokenText == "interface")) {
       
       // Simple check: if this is the first token on the line, it's a unit section
       bool isUnitSection = Line->Tokens.empty();
@@ -1505,7 +1506,8 @@ void UnwrappedLineParser::parseStructuralElement(
         nextToken();
         addUnwrappedLine();
         return;
-      } else if (FormatTok->is(Keywords.kw_pascal_interface)) {
+      } else if (FormatTok->is(Keywords.kw_pascal_interface) || 
+                 (Style.isPascal() && FormatTok->TokenText == "interface")) {
         // This is an interface type declaration (e.g., "ICalculator = interface")
         // Consume the interface keyword first
         nextToken();

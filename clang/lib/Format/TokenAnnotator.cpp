@@ -5757,6 +5757,11 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     if (!Keywords.isVerilogBegin(Right) && Keywords.isVerilogEndOfLabel(Left))
       return true;
   } else if (Style.isPascal()) {
+    // Always break before GUID attributes in interface declarations
+    if (Left.is(Keywords.kw_pascal_interface) && Right.is(tok::l_square)) {
+      return true;
+    }
+    
     // Never break Pascal unit/program names
     if (Left.is(TT_PascalUnitName) || Right.is(TT_PascalUnitName)) {
       return false;
