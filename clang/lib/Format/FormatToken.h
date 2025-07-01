@@ -1280,6 +1280,63 @@ struct AdditionalKeywords {
     kw_multiclass = &IdentTable.get("multiclass");
     kw_then = &IdentTable.get("then");
 
+    // Pascal keywords
+    kw_pascal_program = &IdentTable.get("program");
+    kw_pascal_begin = &IdentTable.get("begin");
+    kw_pascal_end = &IdentTable.get("end");
+    kw_pascal_var = &IdentTable.get("var");
+    kw_pascal_const = &IdentTable.get("const");
+    kw_pascal_type = &IdentTable.get("type");
+    kw_pascal_procedure = &IdentTable.get("procedure");
+    kw_pascal_function = &IdentTable.get("function");
+    kw_pascal_if = &IdentTable.get("if");
+    kw_pascal_then = &IdentTable.get("then");
+    kw_pascal_else = &IdentTable.get("else");
+    kw_pascal_case = &IdentTable.get("case");
+    kw_pascal_of = &IdentTable.get("of");
+    kw_pascal_for = &IdentTable.get("for");
+    kw_pascal_to = &IdentTable.get("to");
+    kw_pascal_downto = &IdentTable.get("downto");
+    kw_pascal_do = &IdentTable.get("do");
+    kw_pascal_while = &IdentTable.get("while");
+    kw_pascal_repeat = &IdentTable.get("repeat");
+    kw_pascal_until = &IdentTable.get("until");
+    kw_pascal_array = &IdentTable.get("array");
+    kw_pascal_record = &IdentTable.get("record");
+    kw_pascal_unit = &IdentTable.get("unit");
+    kw_pascal_uses = &IdentTable.get("uses");
+    kw_pascal_interface = &IdentTable.get("interface");
+    kw_pascal_implementation = &IdentTable.get("implementation");
+    kw_pascal_with = &IdentTable.get("with");
+    kw_pascal_try = &IdentTable.get("try");
+    kw_pascal_finally = &IdentTable.get("finally");
+    kw_pascal_except = &IdentTable.get("except");
+    kw_pascal_on = &IdentTable.get("on");
+    kw_pascal_mod = &IdentTable.get("mod");
+    kw_pascal_new = &IdentTable.get("new");
+    kw_pascal_dispose = &IdentTable.get("dispose");
+    kw_pascal_div = &IdentTable.get("div");
+    kw_pascal_class = &IdentTable.get("class");
+    kw_pascal_operator = &IdentTable.get("operator");
+    kw_pascal_property = &IdentTable.get("property");
+    kw_pascal_read = &IdentTable.get("read");
+    kw_pascal_write = &IdentTable.get("write");
+    kw_pascal_overload = &IdentTable.get("overload");
+    kw_pascal_inline = &IdentTable.get("inline");
+    kw_pascal_reference = &IdentTable.get("reference");
+    kw_pascal_initialization = &IdentTable.get("initialization");
+    kw_pascal_finalization = &IdentTable.get("finalization");
+    kw_pascal_virtual = &IdentTable.get("virtual");
+    kw_pascal_abstract = &IdentTable.get("abstract");
+    kw_pascal_override = &IdentTable.get("override");
+    kw_pascal_inherited = &IdentTable.get("inherited");
+    kw_pascal_constructor = &IdentTable.get("constructor");
+    kw_pascal_destructor = &IdentTable.get("destructor");
+    kw_pascal_public = &IdentTable.get("public");
+    kw_pascal_private = &IdentTable.get("private");
+    kw_pascal_protected = &IdentTable.get("protected");
+    kw_pascal_published = &IdentTable.get("published");
+
     // Keep this at the end of the constructor to make sure everything here is
     // already initialized.
     JsExtraKeywords = std::unordered_set<IdentifierInfo *>(
@@ -1365,6 +1422,64 @@ struct AdditionalKeywords {
         kw_multiclass,
         kw_string,
         kw_then,
+    });
+
+    PascalExtraKeywords = std::unordered_set<IdentifierInfo *>({
+        kw_pascal_program,
+        kw_pascal_begin,
+        kw_pascal_end,
+        kw_pascal_var,
+        kw_pascal_const,
+        kw_pascal_type,
+        kw_pascal_procedure,
+        kw_pascal_function,
+        kw_pascal_if,
+        kw_pascal_then,
+        kw_pascal_else,
+        kw_pascal_case,
+        kw_pascal_of,
+        kw_pascal_for,
+        kw_pascal_to,
+        kw_pascal_downto,
+        kw_pascal_do,
+        kw_pascal_while,
+        kw_pascal_repeat,
+        kw_pascal_until,
+        kw_pascal_array,
+        kw_pascal_record,
+        kw_pascal_unit,
+        kw_pascal_uses,
+        kw_pascal_interface,
+        kw_pascal_implementation,
+        kw_pascal_with,
+        kw_pascal_try,
+        kw_pascal_finally,
+        kw_pascal_except,
+        kw_pascal_on,
+        kw_pascal_mod,
+        kw_pascal_new,
+        kw_pascal_dispose,
+        kw_pascal_div,
+        kw_pascal_class,
+        kw_pascal_operator,
+        kw_pascal_property,
+        kw_pascal_read,
+        kw_pascal_write,
+        kw_pascal_overload,
+        kw_pascal_inline,
+        kw_pascal_reference,
+        kw_pascal_initialization,
+        kw_pascal_finalization,
+        kw_pascal_virtual,
+        kw_pascal_abstract,
+        kw_pascal_override,
+        kw_pascal_inherited,
+        kw_pascal_constructor,
+        kw_pascal_destructor,
+        kw_pascal_public,
+        kw_pascal_private,
+        kw_pascal_protected,
+        kw_pascal_published,
     });
   }
 
@@ -1628,6 +1743,63 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_multiclass;
   IdentifierInfo *kw_then;
 
+  // Pascal keywords
+  IdentifierInfo *kw_pascal_program;
+  IdentifierInfo *kw_pascal_begin;
+  IdentifierInfo *kw_pascal_end;
+  IdentifierInfo *kw_pascal_var;
+  IdentifierInfo *kw_pascal_const;
+  IdentifierInfo *kw_pascal_type;
+  IdentifierInfo *kw_pascal_procedure;
+  IdentifierInfo *kw_pascal_function;
+  IdentifierInfo *kw_pascal_if;
+  IdentifierInfo *kw_pascal_then;
+  IdentifierInfo *kw_pascal_else;
+  IdentifierInfo *kw_pascal_case;
+  IdentifierInfo *kw_pascal_of;
+  IdentifierInfo *kw_pascal_for;
+  IdentifierInfo *kw_pascal_to;
+  IdentifierInfo *kw_pascal_downto;
+  IdentifierInfo *kw_pascal_do;
+  IdentifierInfo *kw_pascal_while;
+  IdentifierInfo *kw_pascal_repeat;
+  IdentifierInfo *kw_pascal_until;
+  IdentifierInfo *kw_pascal_array;
+  IdentifierInfo *kw_pascal_record;
+  IdentifierInfo *kw_pascal_unit;
+  IdentifierInfo *kw_pascal_uses;
+  IdentifierInfo *kw_pascal_interface;
+  IdentifierInfo *kw_pascal_implementation;
+  IdentifierInfo *kw_pascal_with;
+  IdentifierInfo *kw_pascal_try;
+  IdentifierInfo *kw_pascal_finally;
+  IdentifierInfo *kw_pascal_except;
+  IdentifierInfo *kw_pascal_on;
+  IdentifierInfo *kw_pascal_mod;
+  IdentifierInfo *kw_pascal_new;
+  IdentifierInfo *kw_pascal_dispose;
+  IdentifierInfo *kw_pascal_div;
+  IdentifierInfo *kw_pascal_class;
+  IdentifierInfo *kw_pascal_operator;
+  IdentifierInfo *kw_pascal_property;
+  IdentifierInfo *kw_pascal_read;
+  IdentifierInfo *kw_pascal_write;
+  IdentifierInfo *kw_pascal_overload;
+  IdentifierInfo *kw_pascal_inline;
+  IdentifierInfo *kw_pascal_reference;
+  IdentifierInfo *kw_pascal_initialization;
+  IdentifierInfo *kw_pascal_finalization;
+  IdentifierInfo *kw_pascal_virtual;
+  IdentifierInfo *kw_pascal_abstract;
+  IdentifierInfo *kw_pascal_override;
+  IdentifierInfo *kw_pascal_inherited;
+  IdentifierInfo *kw_pascal_constructor;
+  IdentifierInfo *kw_pascal_destructor;
+  IdentifierInfo *kw_pascal_public;
+  IdentifierInfo *kw_pascal_private;
+  IdentifierInfo *kw_pascal_protected;
+  IdentifierInfo *kw_pascal_published;
+
   /// Returns \c true if \p Tok is a keyword or an identifier.
   bool isWordLike(const FormatToken &Tok, bool IsVerilog = true) const {
     // getIdentifierinfo returns non-null for keywords as well as identifiers.
@@ -1756,6 +1928,28 @@ struct AdditionalKeywords {
       return Tok.is(tok::identifier) &&
              CSharpExtraKeywords.find(Tok.Tok.getIdentifierInfo()) ==
                  CSharpExtraKeywords.end();
+    }
+  }
+
+  /// Returns \c true if \p Tok is a Pascal keyword, returns \c false if it is
+  /// anything else.
+  bool isPascalKeyword(const FormatToken &Tok) const {
+    switch (Tok.Tok.getKind()) {
+    // Pascal has fewer built-in C++ keywords that overlap
+    case tok::kw_case:
+    case tok::kw_const:
+    case tok::kw_default:
+    case tok::kw_do:
+    case tok::kw_else:
+    case tok::kw_for:
+    case tok::kw_if:
+    case tok::kw_return:
+    case tok::kw_while:
+      return true;
+    default:
+      return Tok.is(tok::identifier) &&
+             PascalExtraKeywords.find(Tok.Tok.getIdentifierInfo()) !=
+                 PascalExtraKeywords.end();
     }
   }
 
@@ -1939,6 +2133,9 @@ private:
 
   /// The TableGen keywords beyond the C++ keyword set.
   std::unordered_set<IdentifierInfo *> TableGenExtraKeywords;
+
+  /// The Pascal keywords beyond the C++ keyword set.
+  std::unordered_set<IdentifierInfo *> PascalExtraKeywords;
 };
 
 inline bool isLineComment(const FormatToken &FormatTok) {

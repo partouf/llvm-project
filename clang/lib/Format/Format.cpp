@@ -4035,6 +4035,9 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style) {
   case FormatStyle::LK_C:
     LangOpts.C11 = 1;
     break;
+  case FormatStyle::LK_Pascal:
+    LangOpts.PascalComments = 1;
+    break;
   case FormatStyle::LK_Cpp:
   case FormatStyle::LK_ObjC:
     LangOpts.CXXOperatorNames = 1;
@@ -4119,6 +4122,12 @@ static FormatStyle::LanguageKind getLanguageByFileName(StringRef FileName) {
       FileName.ends_with_insensitive(".vh")) {
     return FormatStyle::LK_Verilog;
   }
+  if (FileName.ends_with_insensitive(".pas") ||
+      FileName.ends_with_insensitive(".dpr") ||
+      FileName.ends_with_insensitive(".pp") ||
+      FileName.ends_with_insensitive(".inc")) {
+    return FormatStyle::LK_Pascal;
+  }
   return FormatStyle::LK_Cpp;
 }
 
@@ -4146,6 +4155,8 @@ static FormatStyle::LanguageKind getLanguageByComment(const Environment &Env) {
       return FormatStyle::LK_Cpp;
     if (Text == "ObjC")
       return FormatStyle::LK_ObjC;
+    if (Text == "Pascal")
+      return FormatStyle::LK_Pascal;
   }
 
   return FormatStyle::LK_None;

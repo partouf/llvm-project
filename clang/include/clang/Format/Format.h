@@ -3376,7 +3376,9 @@ struct FormatStyle {
     /// Should be used for Verilog and SystemVerilog.
     /// https://standards.ieee.org/ieee/1800/6700/
     /// https://sci-hub.st/10.1109/IEEESTD.2018.8299595
-    LK_Verilog
+    LK_Verilog,
+    /// Should be used for Pascal and Delphi.
+    LK_Pascal
   };
   bool isCpp() const {
     return Language == LK_Cpp || Language == LK_C || Language == LK_ObjC;
@@ -3387,6 +3389,7 @@ struct FormatStyle {
   bool isJavaScript() const { return Language == LK_JavaScript; }
   bool isVerilog() const { return Language == LK_Verilog; }
   bool isTextProto() const { return Language == LK_TextProto; }
+  bool isPascal() const { return Language == LK_Pascal; }
   bool isProto() const { return Language == LK_Proto || isTextProto(); }
   bool isTableGen() const { return Language == LK_TableGen; }
 
@@ -5800,6 +5803,8 @@ inline StringRef getLanguageName(FormatStyle::LanguageKind Language) {
     return "TextProto";
   case FormatStyle::LK_Verilog:
     return "Verilog";
+  case FormatStyle::LK_Pascal:
+    return "Pascal";
   default:
     return "Unknown";
   }

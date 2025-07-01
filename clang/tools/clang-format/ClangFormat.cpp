@@ -25,6 +25,8 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Process.h"
+#include "../../lib/Format/FormatTokenLexer.h"
+#include "../../lib/Format/FormatToken.h"
 #include <fstream>
 
 using namespace llvm;
@@ -142,6 +144,11 @@ static cl::opt<bool>
            cl::desc("If set, do not actually make the formatting changes"),
            cl::cat(ClangFormatCategory));
 
+static cl::opt<std::string> OutputTokenized(
+    "output-tokenized",
+    cl::desc("Output tokenization information to the specified file"),
+    cl::value_desc("filename"), cl::init(""), cl::cat(ClangFormatCategory));
+
 // Use -n as a common command as an alias for --dry-run. (git and make use -n)
 static cl::alias DryRunShort("n", cl::desc("Alias for --dry-run"),
                              cl::cat(ClangFormatCategory), cl::aliasopt(DryRun),
@@ -224,6 +231,91 @@ static FileID createInMemoryFile(StringRef FileName, MemoryBufferRef Source,
   auto File = Files.getOptionalFileRef(FileName);
   assert(File && "File not added to MemFS?");
   return Sources.createFileID(*File, SourceLocation(), SrcMgr::C_User);
+}
+
+// Output detailed tokenization information
+static void outputTokenization(llvm::raw_ostream &OS, const FormatStyle &Style,
+                               StringRef Code, StringRef FileName) {
+  OS << "=== clang-format Tokenization Debug ===\n";
+  OS << "File: " << FileName << "\n";
+  OS << "Language: " << getLanguageName(Style.Language) << "\n";
+  OS << "Input code:\n" << Code << "\n\n";
+  
+  // Create file system and managers for tokenization
+  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
+  FileManager Files(FileSystemOptions(), InMemoryFileSystem);
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diagnostics(
+      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), DiagOpts);
+  SourceManager Sources(Diagnostics, Files);
+  
+  // Create in-memory file
+  auto Buffer = MemoryBuffer::getMemBuffer(Code, FileName);
+  const auto ID = createInMemoryFile(FileName, *Buffer, Sources, Files,
+                                     InMemoryFileSystem.get());
+                                     
+  // Tokenize the code
+  IdentifierTable IdentTable(LangOptions{});
+  llvm::SpecificBumpPtrAllocator<FormatToken> Allocator;
+  FormatTokenLexer Lexer(Sources, ID, 0, Style, encoding::Encoding_UTF8,
+                         Allocator, IdentTable);
+  const AdditionalKeywords &Keywords = Lexer.getKeywords();
+  
+  auto Tokens = Lexer.lex();
+  
+  // Additional processing to handle token merging
+  // Note: This is where `:=` operators would be merged from separate `:` and `=` tokens
+  
+  OS << "Tokens (" << Tokens.size() << " total):\n";
+  OS << "Line   Col            Kind                 Type  Text\n";
+  OS << std::string(70, '-') << "\n";
+  
+  for (const auto *Token : Tokens) {
+    if (Token->is(tok::eof))
+      break;
+      
+    unsigned Line = Sources.getSpellingLineNumber(Token->Tok.getLocation());
+    unsigned Column = Sources.getSpellingColumnNumber(Token->Tok.getLocation());
+    
+    StringRef TokenKindName = Token->Tok.getName();
+    // Extract just the token text using location and length
+    SourceLocation TokenLoc = Token->Tok.getLocation();
+    unsigned TokenLen = Token->Tok.getLength();
+    StringRef TokenText = StringRef(Sources.getCharacterData(TokenLoc), TokenLen);
+    
+    // Get token type description
+    std::string TypeDesc = "Unknown";
+    if (Style.isPascal() && Keywords.isPascalKeyword(*Token)) {
+      TypeDesc = "Pascal-Keyword";
+    } else if (Token->is(tok::identifier)) {
+      TypeDesc = "Identifier";
+    } else if (Token->Tok.isLiteral()) {
+      TypeDesc = "Literal";
+    } else if (Token->isUnaryOperator()) {
+      TypeDesc = "UnaryOp";
+    } else if (Token->isBinaryOperator()) {
+      TypeDesc = "BinaryOp";
+    } else if (Token->is(tok::comment)) {
+      TypeDesc = "Comment";
+    } else if (Token->Tok.getKind() >= tok::kw_auto && Token->Tok.getKind() <= tok::kw__Generic) {
+      TypeDesc = "Keyword";
+    } else if (Style.isPascal()) {
+      TypeDesc = "Pascal-NotKeyword"; 
+    }
+    
+    OS << llvm::format("%6u %6u %15s %20s  len=%2u '%.*s'\n", 
+                       Line, Column, 
+                       TokenKindName.data(),
+                       TypeDesc.c_str(),
+                       TokenLen,
+                       (int)TokenLen, TokenText.data());
+  }
+  
+  OS << "\nNotes:\n";
+  OS << "- This shows actual clang-format tokenization\n";
+  OS << "- Language-specific keyword recognition may vary\n";
+  OS << "- Use this to debug Pascal language integration\n";
 }
 
 // Parses <start line>:<end line> input to a pair of line numbers.
@@ -508,6 +600,18 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
   Replacements FormatChanges =
       reformat(*FormatStyle, *ChangedCode, Ranges, AssumedFileName, &Status);
   Replaces = Replaces.merge(FormatChanges);
+  
+  // Output tokenization if requested
+  if (!OutputTokenized.empty()) {
+    std::error_code EC;
+    llvm::raw_fd_ostream TokenFile(OutputTokenized, EC, llvm::sys::fs::OF_Text);
+    if (EC) {
+      llvm::errs() << "error: could not open tokenization output file '"
+                   << OutputTokenized << "': " << EC.message() << "\n";
+    } else {
+      outputTokenization(TokenFile, *FormatStyle, *ChangedCode, AssumedFileName);
+    }
+  }
   if (DryRun) {
     return Replaces.size() > (IsJson ? 1u : 0u) &&
            emitReplacementWarnings(Replaces, AssumedFileName, Code);

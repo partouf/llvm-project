@@ -14,6 +14,7 @@ add_distinct_clang_unittest(FormatTests
   FormatTestJson.cpp
   FormatTestMacroExpansion.cpp
   FormatTestObjC.cpp
+  FormatTestPascal.cpp
   FormatTestProto.cpp
   FormatTestRawStrings.cpp
   FormatTestSelective.cpp

@@ -3080,6 +3080,153 @@ bool Lexer::SkipBlockComment(Token &Result, const char *CurPtr,
   return false;
 }
 
+/// SkipPascalBraceComment - We have just read the '{' character, skip until 
+/// we find the '}' character that terminates the comment.
+bool Lexer::SkipPascalBraceComment(Token &Result, const char *CurPtr,
+                                   bool &TokAtPhysicalStartOfLine) {
+  // Scan until we find the '}' character.
+  unsigned CharSize;
+  unsigned char C = getCharAndSize(CurPtr, CharSize);
+  CurPtr += CharSize;
+  if (C == 0 && CurPtr == BufferEnd+1) {
+    if (!isLexingRawMode())
+      Diag(BufferPtr, diag::err_unterminated_block_comment);
+    --CurPtr;
+
+    // KeepWhitespaceMode should return this broken comment as a token.
+    if (isKeepWhitespaceMode()) {
+      FormTokenWithChars(Result, CurPtr, tok::unknown);
+      return true;
+    }
+
+    BufferPtr = CurPtr;
+    return false;
+  }
+
+  // Scan for '}' efficiently
+  while (C != '}' && C != '\0') {
+    C = *CurPtr++;
+  }
+
+  // If we found the '}', we're done.
+  if (C == '}') {
+    // Notify comment handlers about the comment unless we're in a #if 0 block.
+    if (PP && !isLexingRawMode() &&
+        PP->HandleComment(Result, SourceRange(getSourceLocation(BufferPtr),
+                                              getSourceLocation(CurPtr)))) {
+      BufferPtr = CurPtr;
+      return true; // A token has to be returned.
+    }
+
+    // If we are returning comments as tokens, return this comment as a token.
+    if (inKeepCommentMode()) {
+      FormTokenWithChars(Result, CurPtr, tok::comment);
+      return true;
+    }
+
+    // Handle whitespace after comment efficiently
+    if (isHorizontalWhitespace(*CurPtr)) {
+      SkipWhitespace(Result, CurPtr+1, TokAtPhysicalStartOfLine);
+      return false;
+    }
+
+    // Otherwise, just return so that the next character will be lexed as a token.
+    BufferPtr = CurPtr;
+    Result.setFlag(Token::LeadingSpace);
+    return false;
+  }
+
+  // Reached end of file without finding '}'
+  if (!isLexingRawMode())
+    Diag(BufferPtr, diag::err_unterminated_block_comment);
+
+  if (isKeepWhitespaceMode()) {
+    FormTokenWithChars(Result, CurPtr, tok::unknown);
+    return true;
+  }
+
+  BufferPtr = CurPtr;
+  return false;
+}
+
+/// SkipPascalParenComment - We have just read the '(*' characters, skip until 
+/// we find the '*)' characters that terminate the comment.
+bool Lexer::SkipPascalParenComment(Token &Result, const char *CurPtr,
+                                   bool &TokAtPhysicalStartOfLine) {
+  // Scan until we find the '*/' character sequence.
+  unsigned CharSize;
+  unsigned char C = getCharAndSize(CurPtr, CharSize);
+  CurPtr += CharSize;
+  if (C == 0 && CurPtr == BufferEnd+1) {
+    if (!isLexingRawMode())
+      Diag(BufferPtr, diag::err_unterminated_block_comment);
+    --CurPtr;
+
+    // KeepWhitespaceMode should return this broken comment as a token.
+    if (isKeepWhitespaceMode()) {
+      FormTokenWithChars(Result, CurPtr, tok::unknown);
+      return true;
+    }
+
+    BufferPtr = CurPtr;
+    return false;
+  }
+
+  // Scan for '*' followed by ')' efficiently
+  while (C != '*' && C != '\0') {
+    C = *CurPtr++;
+  }
+
+  // Found '*', check if followed by ')'
+  while (C != '\0') {
+    if (C == '*') {
+      C = *CurPtr++;
+      if (C == ')') {
+        // Found '*)' - end of comment
+        // Notify comment handlers about the comment unless we're in a #if 0 block.
+        if (PP && !isLexingRawMode() &&
+            PP->HandleComment(Result, SourceRange(getSourceLocation(BufferPtr),
+                                                  getSourceLocation(CurPtr)))) {
+          BufferPtr = CurPtr;
+          return true; // A token has to be returned.
+        }
+
+        // If we are returning comments as tokens, return this comment as a token.
+        if (inKeepCommentMode()) {
+          FormTokenWithChars(Result, CurPtr, tok::comment);
+          return true;
+        }
+
+        // Handle whitespace after comment efficiently
+        if (isHorizontalWhitespace(*CurPtr)) {
+          SkipWhitespace(Result, CurPtr+1, TokAtPhysicalStartOfLine);
+          return false;
+        }
+
+        // Otherwise, just return so that the next character will be lexed as a token.
+        BufferPtr = CurPtr;
+        Result.setFlag(Token::LeadingSpace);
+        return false;
+      }
+      // '*' not followed by ')', continue scanning
+    } else {
+      C = *CurPtr++;
+    }
+  }
+
+  // Reached end of file without finding '*)'
+  if (!isLexingRawMode())
+    Diag(BufferPtr, diag::err_unterminated_block_comment);
+
+  if (isKeepWhitespaceMode()) {
+    FormTokenWithChars(Result, CurPtr, tok::unknown);
+    return true;
+  }
+
+  BufferPtr = CurPtr;
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // Primary Lexing Entry Points
 //===----------------------------------------------------------------------===//
@@ -3875,6 +4022,17 @@ LexStart:
       if (SkipBlockComment(Result, CurPtr+2, TokAtPhysicalStartOfLine))
         return true; // There is a token to return.
       goto SkipIgnoredUnits;
+    } else if (LangOpts.PascalComments && !inKeepCommentMode()) {
+      // Fast path for Pascal comments: { } and (* *)
+      if (CurPtr[0] == '{') {
+        if (SkipPascalBraceComment(Result, CurPtr+1, TokAtPhysicalStartOfLine))
+          return true; // There is a token to return.
+        goto SkipIgnoredUnits;
+      } else if (CurPtr[0] == '(' && CurPtr[1] == '*') {
+        if (SkipPascalParenComment(Result, CurPtr+2, TokAtPhysicalStartOfLine))
+          return true; // There is a token to return.
+        goto SkipIgnoredUnits;
+      }
     } else if (isHorizontalWhitespace(*CurPtr)) {
       goto SkipHorizontalWhitespace;
     }
@@ -4072,12 +4230,25 @@ LexStart:
     Kind = tok::r_square;
     break;
   case '(':
+    // Check for Pascal comment '(*'
+    if (LangOpts.PascalComments && getCharAndSize(CurPtr, SizeTmp) == '*') {
+      if (SkipPascalParenComment(Result, ConsumeChar(CurPtr, SizeTmp, Result),
+                                 TokAtPhysicalStartOfLine))
+        return false; // A token was returned.
+      goto LexNextToken;
+    }
     Kind = tok::l_paren;
     break;
   case ')':
     Kind = tok::r_paren;
     break;
   case '{':
+    // Check for Pascal comment '{'
+    if (LangOpts.PascalComments) {
+      if (SkipPascalBraceComment(Result, CurPtr, TokAtPhysicalStartOfLine))
+        return false; // A token was returned.
+      goto LexNextToken;
+    }
     Kind = tok::l_brace;
     break;
   case '}':

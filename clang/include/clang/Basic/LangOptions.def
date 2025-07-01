@@ -130,6 +130,7 @@ BENIGN_LANGOPT(HexFloats  , 1, 0, "C99 hexadecimal float constants")
 LANGOPT(CXXOperatorNames  , 1, 0, "C++ operator name keywords")
 LANGOPT(AppleKext         , 1, 0, "Apple kext support")
 BENIGN_LANGOPT(PascalStrings, 1, 0, "Pascal string support")
+BENIGN_LANGOPT(PascalComments, 1, 0, "Pascal comment support")
 LANGOPT(WritableStrings   , 1, 0, "writable string support")
 LANGOPT(ConstStrings      , 1, 0, "const-qualified string support")
 ENUM_LANGOPT(LaxVectorConversions, LaxVectorConversionKind, 2,

@@ -771,6 +771,10 @@ private:
                               bool &TokAtPhysicalStartOfLine);
   bool SkipBlockComment      (Token &Result, const char *CurPtr,
                               bool &TokAtPhysicalStartOfLine);
+  bool SkipPascalBraceComment(Token &Result, const char *CurPtr,
+                              bool &TokAtPhysicalStartOfLine);
+  bool SkipPascalParenComment(Token &Result, const char *CurPtr,
+                              bool &TokAtPhysicalStartOfLine);
   bool SaveLineComment       (Token &Result, const char *CurPtr);
 
   bool IsStartOfConflictMarker(const char *CurPtr);
