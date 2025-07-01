@@ -485,6 +485,13 @@ template <> struct ScalarEnumerationTraits<FormatStyle::OperandAlignmentStyle> {
   }
 };
 
+template <> struct ScalarEnumerationTraits<FormatStyle::PascalPropertyStyle> {
+  static void enumeration(IO &IO, FormatStyle::PascalPropertyStyle &Value) {
+    IO.enumCase(Value, "SingleLine", FormatStyle::PPS_SingleLine);
+    IO.enumCase(Value, "MultiLine", FormatStyle::PPS_MultiLine);
+  }
+};
+
 template <>
 struct ScalarEnumerationTraits<FormatStyle::PackConstructorInitializersStyle> {
   static void
@@ -1013,6 +1020,7 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.AllowShortNamespacesOnASingleLine);
     IO.mapOptional("AllowShortInlineVariablesOnASingleLine",
                    Style.AllowShortInlineVariablesOnASingleLine);
+    IO.mapOptional("PascalProperties", Style.PascalProperties);
     IO.mapOptional("AlwaysBreakAfterDefinitionReturnType",
                    Style.AlwaysBreakAfterDefinitionReturnType);
     IO.mapOptional("AlwaysBreakBeforeMultilineStrings",
@@ -1533,6 +1541,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AllowShortLoopsOnASingleLine = false;
   LLVMStyle.AllowShortNamespacesOnASingleLine = false;
   LLVMStyle.AllowShortInlineVariablesOnASingleLine = true;
+  LLVMStyle.PascalProperties = FormatStyle::PPS_SingleLine;
   LLVMStyle.AlwaysBreakAfterDefinitionReturnType = FormatStyle::DRTBS_None;
   LLVMStyle.AlwaysBreakBeforeMultilineStrings = false;
   LLVMStyle.AttributeMacros.push_back("__capability");

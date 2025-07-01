@@ -5345,8 +5345,41 @@ void UnwrappedLineParser::parsePascalTypeDeclaration() {
               ++Line->Level; // Indent members within visibility section
               InVisibilitySection = true;
             } else if (FormatTok->is(Keywords.kw_pascal_property)) {
-              // Property declarations - let normal parsing handle formatting
-              parseStructuralElement();
+              // Property declarations with configurable formatting
+              if (Style.PascalProperties == FormatStyle::PPS_MultiLine) {
+                // Multi-line property formatting with read/write clauses on separate lines
+                nextToken(); // 'property'
+                if (FormatTok && FormatTok->is(tok::identifier))
+                  nextToken(); // property name
+                if (FormatTok && FormatTok->is(tok::colon))
+                  nextToken(); // ':'
+                if (FormatTok && FormatTok->is(tok::identifier))
+                  nextToken(); // type
+                
+                addUnwrappedLine(); // Break after property name: type
+                
+                // Parse read/write clauses with continuation indentation
+                ++Line->Level; // Add one level for continuation indentation
+                if (FormatTok && FormatTok->is(Keywords.kw_pascal_read)) {
+                  nextToken(); // 'read'
+                  if (FormatTok && FormatTok->is(tok::identifier))
+                    nextToken(); // method name
+                  if (FormatTok && FormatTok->is(Keywords.kw_pascal_write)) {
+                    nextToken(); // 'write'
+                    if (FormatTok && FormatTok->is(tok::identifier))
+                      nextToken(); // method name
+                  }
+                  
+                  if (FormatTok && FormatTok->is(tok::semi)) {
+                    nextToken();
+                  }
+                  addUnwrappedLine(); // Create line with proper indentation
+                }
+                --Line->Level; // Restore level after property
+              } else {
+                // Single-line property formatting (default)
+                parseStructuralElement();
+              }
             } else {
               // Other declarations (procedures, functions, fields)
               parseStructuralElement();

@@ -997,6 +997,25 @@ struct FormatStyle {
   /// \version 20
   bool AllowShortInlineVariablesOnASingleLine;
 
+  /// Different ways to format Pascal property declarations.
+  enum PascalPropertyStyle : int8_t {
+    /// Properties on a single line with read/write clauses.
+    /// \code
+    ///   property Data: string read GetData write SetData;
+    /// \endcode
+    PPS_SingleLine,
+    /// Properties with read/write clauses on separate indented lines.
+    /// \code
+    ///   property Data: string
+    ///     read GetData write SetData;
+    /// \endcode
+    PPS_MultiLine,
+  };
+
+  /// The style to use for Pascal property declarations.
+  /// \version 20
+  PascalPropertyStyle PascalProperties;
+
   /// Different ways to break after the function definition return type.
   /// This option is **deprecated** and is retained for backwards compatibility.
   enum DefinitionReturnTypeBreakingStyle : int8_t {
@@ -5351,6 +5370,7 @@ struct FormatStyle {
                R.AllowShortNamespacesOnASingleLine &&
            AllowShortInlineVariablesOnASingleLine ==
                R.AllowShortInlineVariablesOnASingleLine &&
+           PascalProperties == R.PascalProperties &&
            AlwaysBreakBeforeMultilineStrings ==
                R.AlwaysBreakBeforeMultilineStrings &&
            AttributeMacros == R.AttributeMacros &&
