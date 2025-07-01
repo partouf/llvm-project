@@ -1373,7 +1373,7 @@ private:
         }
         // Handle Pascal variable declaration colons (x: integer)
         // This includes: var declarations, function parameters, function return types
-        else if (Prev && Prev->is(tok::identifier) &&
+        else if (Prev && (Prev->is(tok::identifier) || Prev->is(tok::r_paren)) &&
                  Tok->Next && Tok->Next->is(tok::identifier)) {
           Tok->setType(TT_PascalVariableColon);
           break;

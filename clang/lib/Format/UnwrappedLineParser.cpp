@@ -1496,10 +1496,38 @@ void UnwrappedLineParser::parseStructuralElement(
     // Handle Pascal interface/implementation sections (should not be indented)
     if (FormatTok->is(Keywords.kw_pascal_interface) ||
         FormatTok->is(Keywords.kw_pascal_implementation)) {
-      FormatTok->setFinalizedType(TT_PascalSectionStart);
-      nextToken();
-      addUnwrappedLine();
-      return;
+      
+      // Simple check: if this is the first token on the line, it's a unit section
+      bool isUnitSection = Line->Tokens.empty();
+      
+      if (isUnitSection) {
+        FormatTok->setFinalizedType(TT_PascalSectionStart);
+        nextToken();
+        addUnwrappedLine();
+        return;
+      } else if (FormatTok->is(Keywords.kw_pascal_interface)) {
+        // This is an interface type declaration (e.g., "ICalculator = interface")
+        // Consume the interface keyword first
+        nextToken();
+        
+        // Check if the next token is a GUID attribute
+        if (FormatTok && FormatTok->is(tok::l_square)) {
+          // Break line after interface keyword
+          addUnwrappedLine();
+          ++Line->Level; // Indent the attribute
+          
+          // Parse the attribute on its own line
+          while (FormatTok && !FormatTok->is(tok::r_square)) {
+            nextToken();
+          }
+          if (FormatTok && FormatTok->is(tok::r_square)) {
+            nextToken(); // consume ']'
+          }
+          addUnwrappedLine(); // Break line after attribute
+          --Line->Level; // Reset level for subsequent parsing
+        }
+        return;
+      }
     }
     if (FormatTok->is(Keywords.kw_pascal_begin)) {
       FormatTok->setFinalizedType(TT_PascalBegin);
