@@ -1465,6 +1465,27 @@ void UnwrappedLineParser::parseStructuralElement(
         break;
       }
     }
+  } else if (Style.isPascal()) {
+    // Handle Pascal-specific constructs - simplified for now
+    if (FormatTok->is(Keywords.kw_pascal_program) ||
+        FormatTok->is(Keywords.kw_pascal_unit)) {
+      FormatTok->setFinalizedType(TT_PascalProgramDeclaration);
+      nextToken();
+      // Skip program/unit name
+      if (FormatTok->is(tok::identifier))
+        nextToken();
+      if (FormatTok->is(tok::semi))
+        nextToken();
+      addUnwrappedLine();
+      return;
+    }
+    if (FormatTok->is(Keywords.kw_pascal_begin)) {
+      FormatTok->setFinalizedType(TT_PascalBegin);
+      parseBlock(/*MustBeDeclaration=*/false);
+      return;
+    }
+    // For now, just use default parsing for other Pascal constructs
+    // TODO: Re-enable specific Pascal parsing after debugging
   }
 
   // Tokens that only make sense at the beginning of a line.
@@ -5082,6 +5103,131 @@ void UnwrappedLineParser::pushToken(FormatToken *Tok) {
     Tok.FirstAfterPPLine = true;
     AtEndOfPPLine = false;
   }
+}
+
+void UnwrappedLineParser::parsePascalVarDeclaration() {
+  // Pascal var/const/type declarations: var x: integer; const MAX = 100;
+  assert(FormatTok->isOneOf(Keywords.kw_pascal_var, Keywords.kw_pascal_const,
+                            Keywords.kw_pascal_type));
+  nextToken();
+  addUnwrappedLine();
+
+  // Parse variable declarations until we hit a keyword that ends the section
+  while (FormatTok && !eof() &&
+         !FormatTok->isOneOf(Keywords.kw_pascal_begin, Keywords.kw_pascal_procedure,
+                             Keywords.kw_pascal_function, Keywords.kw_pascal_var,
+                             Keywords.kw_pascal_const, Keywords.kw_pascal_type,
+                             Keywords.kw_pascal_implementation)) {
+    if (FormatTok->is(tok::identifier)) {
+      // Parse variable name(s)
+      while (FormatTok && !FormatTok->is(tok::colon) && !FormatTok->is(tok::equal)) {
+        nextToken();
+        if (FormatTok && FormatTok->is(tok::comma))
+          nextToken();
+      }
+      // Parse type or assignment
+      if (FormatTok && FormatTok->is(tok::colon)) {
+        nextToken(); // skip ':'
+        // Skip type
+        while (FormatTok && !FormatTok->is(tok::semi) && !FormatTok->is(tok::equal))
+          nextToken();
+      }
+      if (FormatTok && FormatTok->is(tok::equal)) {
+        nextToken(); // skip '='
+        // Skip value
+        while (FormatTok && !FormatTok->is(tok::semi))
+          nextToken();
+      }
+      if (FormatTok && FormatTok->is(tok::semi)) {
+        nextToken();
+        addUnwrappedLine();
+      }
+    } else {
+      nextToken();
+    }
+  }
+}
+
+void UnwrappedLineParser::parsePascalProcedureDeclaration() {
+  // Pascal procedure/function declarations
+  assert(FormatTok->isOneOf(Keywords.kw_pascal_procedure, Keywords.kw_pascal_function));
+  nextToken();
+
+  // Parse procedure/function name
+  if (FormatTok && FormatTok->is(tok::identifier))
+    nextToken();
+
+  // Parse parameter list
+  if (FormatTok && FormatTok->is(tok::l_paren))
+    parseParens();
+
+  // Parse function return type
+  if (FormatTok && FormatTok->is(tok::colon)) {
+    nextToken();
+    // Skip return type
+    while (FormatTok && !FormatTok->is(tok::semi) && !FormatTok->is(Keywords.kw_pascal_begin))
+      nextToken();
+  }
+
+  // Parse semicolon after declaration
+  if (FormatTok && FormatTok->is(tok::semi)) {
+    nextToken();
+    addUnwrappedLine();
+  }
+
+  // Parse procedure/function body if present
+  if (FormatTok && FormatTok->is(Keywords.kw_pascal_begin)) {
+    FormatTok->setFinalizedType(TT_PascalBegin);
+    parseBlock(/*MustBeDeclaration=*/false);
+    if (FormatTok && FormatTok->is(tok::semi)) {
+      nextToken();
+      addUnwrappedLine();
+    }
+  }
+}
+
+void UnwrappedLineParser::parsePascalCaseStatement() {
+  // Pascal case statement
+  assert(FormatTok->is(Keywords.kw_pascal_case));
+  nextToken();
+
+  // Parse case expression - skip until 'of'
+  while (FormatTok && !FormatTok->is(Keywords.kw_pascal_of)) {
+    nextToken();
+  }
+
+  // Parse 'of' keyword
+  if (FormatTok && FormatTok->is(Keywords.kw_pascal_of))
+    nextToken();
+
+  addUnwrappedLine();
+
+  // Parse case branches
+  while (FormatTok && !eof() && !FormatTok->is(Keywords.kw_pascal_end)) {
+    // Parse case labels
+    while (FormatTok && !FormatTok->is(tok::colon)) {
+      nextToken();
+    }
+    
+    if (FormatTok && FormatTok->is(tok::colon)) {
+      nextToken(); // skip ':'
+      addUnwrappedLine();
+      
+      // Parse case body
+      parseStructuralElement();
+      
+      if (FormatTok && FormatTok->is(tok::semi))
+        nextToken();
+    }
+  }
+
+  // Parse 'end'
+  if (FormatTok && FormatTok->is(Keywords.kw_pascal_end)) {
+    FormatTok->setFinalizedType(TT_PascalEnd);
+    nextToken();
+  }
+
+  addUnwrappedLine();
 }
 
 } // end namespace format

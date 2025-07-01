@@ -992,6 +992,11 @@ struct FormatStyle {
   /// \version 20
   bool AllowShortNamespacesOnASingleLine;
 
+  /// If ``true``, Pascal inline variables like ``for var i := 1 to 10 do`` 
+  /// and ``if var x := 42; x > 0 then`` can be kept on a single line.
+  /// \version 20
+  bool AllowShortInlineVariablesOnASingleLine;
+
   /// Different ways to break after the function definition return type.
   /// This option is **deprecated** and is retained for backwards compatibility.
   enum DefinitionReturnTypeBreakingStyle : int8_t {
@@ -5344,6 +5349,8 @@ struct FormatStyle {
            AllowShortLoopsOnASingleLine == R.AllowShortLoopsOnASingleLine &&
            AllowShortNamespacesOnASingleLine ==
                R.AllowShortNamespacesOnASingleLine &&
+           AllowShortInlineVariablesOnASingleLine ==
+               R.AllowShortInlineVariablesOnASingleLine &&
            AlwaysBreakBeforeMultilineStrings ==
                R.AlwaysBreakBeforeMultilineStrings &&
            AttributeMacros == R.AttributeMacros &&

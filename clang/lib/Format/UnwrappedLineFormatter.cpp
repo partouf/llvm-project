@@ -554,6 +554,13 @@ private:
                  ? tryMergeSimpleControlStatement(I, E, Limit)
                  : 0;
     }
+    // Handle Pascal inline variables (for var, if var)
+    if (Style.isPascal() && Style.AllowShortInlineVariablesOnASingleLine &&
+        TheLine->First->isOneOf(tok::kw_for, tok::kw_if) &&
+        TheLine->First->Next && 
+        TheLine->First->Next->TokenText == "var") {
+      return tryMergeSimpleControlStatement(I, E, Limit);
+    }
     if (TheLine->First->isOneOf(tok::kw_case, tok::kw_default)) {
       return Style.AllowShortCaseLabelsOnASingleLine
                  ? tryMergeShortCaseLabels(I, E, Limit)

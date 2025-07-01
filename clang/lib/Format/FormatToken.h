@@ -213,6 +213,26 @@ namespace format {
   TYPE(VerilogTableItem)                                                       \
   /* those that separate ports of different types */                           \
   TYPE(VerilogTypeComma)                                                       \
+  /* Pascal assignment operator := */                                         \
+  TYPE(PascalAssignment)                                                       \
+  /* Pascal variable declaration colon (x: integer) */                        \
+  TYPE(PascalVariableColon)                                                    \
+  /* Pascal inline variable in for loop (for var i := 1 to 10 do) */         \
+  TYPE(PascalForInlineVar)                                                     \
+  /* Pascal inline variable in if statement (if var x := 42; x > 0 then) */  \
+  TYPE(PascalIfInlineVar)                                                      \
+  /* Pascal 'begin' keyword starting a block */                               \
+  TYPE(PascalBegin)                                                            \
+  /* Pascal 'end' keyword ending a block */                                   \
+  TYPE(PascalEnd)                                                              \
+  /* Pascal program/unit declaration */                                        \
+  TYPE(PascalProgramDeclaration)                                               \
+  /* Pascal procedure/function declaration */                                  \
+  TYPE(PascalProcedureDeclaration)                                             \
+  /* Pascal var/const/type section */                                          \
+  TYPE(PascalVarDeclaration)                                                   \
+  /* Pascal 'with' statement */                                                \
+  TYPE(PascalWithStatement)                                                    \
   TYPE(Unknown)
 
 /// Determines the semantic type of a syntactic token, e.g. whether "<" is a

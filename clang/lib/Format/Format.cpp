@@ -420,6 +420,7 @@ template <> struct ScalarEnumerationTraits<FormatStyle::LanguageKind> {
     IO.enumCase(Value, "TextProto", FormatStyle::LK_TextProto);
     IO.enumCase(Value, "CSharp", FormatStyle::LK_CSharp);
     IO.enumCase(Value, "Json", FormatStyle::LK_Json);
+    IO.enumCase(Value, "Pascal", FormatStyle::LK_Pascal);
     IO.enumCase(Value, "Verilog", FormatStyle::LK_Verilog);
   }
 };
@@ -1010,6 +1011,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.AllowShortLoopsOnASingleLine);
     IO.mapOptional("AllowShortNamespacesOnASingleLine",
                    Style.AllowShortNamespacesOnASingleLine);
+    IO.mapOptional("AllowShortInlineVariablesOnASingleLine",
+                   Style.AllowShortInlineVariablesOnASingleLine);
     IO.mapOptional("AlwaysBreakAfterDefinitionReturnType",
                    Style.AlwaysBreakAfterDefinitionReturnType);
     IO.mapOptional("AlwaysBreakBeforeMultilineStrings",
@@ -1529,6 +1532,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AllowShortLambdasOnASingleLine = FormatStyle::SLS_All;
   LLVMStyle.AllowShortLoopsOnASingleLine = false;
   LLVMStyle.AllowShortNamespacesOnASingleLine = false;
+  LLVMStyle.AllowShortInlineVariablesOnASingleLine = true;
   LLVMStyle.AlwaysBreakAfterDefinitionReturnType = FormatStyle::DRTBS_None;
   LLVMStyle.AlwaysBreakBeforeMultilineStrings = false;
   LLVMStyle.AttributeMacros.push_back("__capability");

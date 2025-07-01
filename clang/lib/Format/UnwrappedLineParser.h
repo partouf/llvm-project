@@ -207,6 +207,11 @@ private:
   std::optional<llvm::SmallVector<llvm::SmallVector<FormatToken *, 8>, 1>>
   parseMacroCall();
 
+  // Pascal parsing methods
+  void parsePascalVarDeclaration();
+  void parsePascalProcedureDeclaration();
+  void parsePascalCaseStatement();
+
   // Used by addUnwrappedLine to denote whether to keep or remove a level
   // when resetting the line state.
   enum class LineLevel { Remove, Keep };

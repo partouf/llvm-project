@@ -1362,6 +1362,22 @@ private:
             --Line.Level;
         }
         break;
+      } else if (Style.isPascal()) {
+        // Handle Pascal assignment operator ":="
+        if (Tok->Next && Tok->Next->is(tok::equal)) {
+          Tok->setFinalizedType(TT_PascalAssignment);
+          Tok->ForcedPrecedence = prec::Assignment;
+          // Also mark the '=' as part of the assignment
+          Tok->Next->setFinalizedType(TT_PascalAssignment);
+          break;
+        }
+        // Handle Pascal variable declaration colons (x: integer)
+        // This includes: var declarations, function parameters, function return types
+        else if (Prev && Prev->is(tok::identifier) &&
+                 Tok->Next && Tok->Next->is(tok::identifier)) {
+          Tok->setType(TT_PascalVariableColon);
+          break;
+        }
       }
       if (Line.First->isOneOf(Keywords.kw_module, Keywords.kw_import) ||
           Line.First->startsSequence(tok::kw_export, Keywords.kw_module) ||
@@ -5454,6 +5470,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       return Style.BitFieldColonSpacing == FormatStyle::BFCS_Both ||
              Style.BitFieldColonSpacing == FormatStyle::BFCS_Before;
     }
+    if (Right.is(TT_PascalVariableColon))
+      return false;  // No space before Pascal variable colons
     return true;
   }
   // Do not merge "- -" into "--".
