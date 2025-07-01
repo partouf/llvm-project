@@ -5355,12 +5355,14 @@ void UnwrappedLineParser::parsePascalTypeDeclaration() {
           nextToken(); // skip 'interface'
           addUnwrappedLine(); // Break after interface declaration
           
-          // Parse interface members with consistent indentation level
-          ++Line->Level; // Increase level for interface content
+          // Parse interface members - use simpler block-like approach
           while (FormatTok && !eof() && !FormatTok->is(Keywords.kw_pascal_end)) {
+            // Force consistent level for interface members
+            unsigned savedLevel = Line->Level;
+            Line->Level = savedLevel + 1;
             parseStructuralElement();
+            Line->Level = savedLevel;
           }
-          --Line->Level; // Restore level after interface content
           
           // Parse 'end'
           if (FormatTok && FormatTok->is(Keywords.kw_pascal_end)) {
