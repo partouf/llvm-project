@@ -1471,9 +1471,11 @@ void UnwrappedLineParser::parseStructuralElement(
         FormatTok->is(Keywords.kw_pascal_unit)) {
       FormatTok->setFinalizedType(TT_PascalProgramDeclaration);
       nextToken();
-      // Skip program/unit name
-      if (FormatTok->is(tok::identifier))
+      // Mark all tokens in the unit/program name to prevent breaking
+      while (FormatTok->is(tok::identifier) || FormatTok->is(tok::period)) {
+        FormatTok->setFinalizedType(TT_PascalUnitName);
         nextToken();
+      }
       if (FormatTok->is(tok::semi))
         nextToken();
       addUnwrappedLine();

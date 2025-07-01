@@ -233,6 +233,8 @@ namespace format {
   TYPE(PascalVarDeclaration)                                                   \
   /* Pascal 'with' statement */                                                \
   TYPE(PascalWithStatement)                                                    \
+  /* Marks the components of a Pascal unit/program name */                     \
+  TYPE(PascalUnitName)                                                         \
   TYPE(Unknown)
 
 /// Determines the semantic type of a syntactic token, e.g. whether "<" is a

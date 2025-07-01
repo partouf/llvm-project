@@ -5757,6 +5757,18 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     if (!Keywords.isVerilogBegin(Right) && Keywords.isVerilogEndOfLabel(Left))
       return true;
   } else if (Style.isPascal()) {
+    // Never break Pascal unit/program names
+    if (Left.is(TT_PascalUnitName) || Right.is(TT_PascalUnitName)) {
+      return false;
+    }
+    
+    // Never break dotted identifiers in Pascal (e.g., GDK.EmailMessage)
+    // This must come first to prevent any other rules from breaking dotted names
+    if ((Left.is(tok::identifier) && Right.is(tok::period)) ||
+        (Left.is(tok::period) && Right.is(tok::identifier))) {
+      return false;
+    }
+    
     // PHASE 3: Pascal inline variable break prevention
     // Never break between for/if and inline var
     if (Left.isOneOf(tok::kw_for, tok::kw_if) && 
@@ -5765,12 +5777,6 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     }
     
     // Never break after inline var before the identifier
-    if (Left.isOneOf(TT_PascalForInlineVar, TT_PascalIfInlineVar) &&
-        Right.is(tok::identifier)) {
-      return false;
-    }
-    
-    // Never break after inline var before assignment
     if (Left.isOneOf(TT_PascalForInlineVar, TT_PascalIfInlineVar) &&
         Right.is(tok::identifier)) {
       return false;
@@ -6239,6 +6245,17 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       return false;
     if (Left.isOneOf(TT_TableGenBangOperator, TT_TableGenCondOperator))
       return false;
+  } else if (Style.isPascal()) {
+    // Never break Pascal unit/program names
+    if (Left.is(TT_PascalUnitName) || Right.is(TT_PascalUnitName)) {
+      return false;
+    }
+    
+    // Never break dotted identifiers in Pascal (e.g., GDK.EmailMessage)
+    if ((Left.is(tok::identifier) && Right.is(tok::period)) ||
+        (Left.is(tok::period) && Right.is(tok::identifier))) {
+      return false;
+    }
   }
 
   // We can break before an r_brace if there was a break after the matching
