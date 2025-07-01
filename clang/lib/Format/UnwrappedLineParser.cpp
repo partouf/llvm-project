@@ -5196,9 +5196,8 @@ void UnwrappedLineParser::parsePascalProcedureDeclaration() {
   // Pascal procedure/function declarations
   assert(FormatTok->isOneOf(Keywords.kw_pascal_procedure, Keywords.kw_pascal_function));
   
-  // Save current level and ensure top-level procedures are at level 0
+  // Save current level and preserve it (no level reset for Pascal procedures)
   unsigned SavedLevel = Line->Level;
-  Line->Level = 0;
   
   // Parse the entire declaration on one line
   while (FormatTok && !eof() && !FormatTok->is(tok::semi) && !FormatTok->is(Keywords.kw_pascal_begin)) {
@@ -5302,6 +5301,7 @@ void UnwrappedLineParser::parsePascalTypeDeclaration() {
           addUnwrappedLine(); // Break after class(...) declaration
           
           // Parse class members with proper indentation
+          ++Line->Level; // Indent class members
           while (FormatTok && !eof() && !FormatTok->is(Keywords.kw_pascal_end)) {
             if (FormatTok->isOneOf(Keywords.kw_pascal_private, Keywords.kw_pascal_public,
                                    Keywords.kw_pascal_protected, Keywords.kw_pascal_published)) {
@@ -5341,6 +5341,8 @@ void UnwrappedLineParser::parsePascalTypeDeclaration() {
               parseStructuralElement();
             }
           }
+          
+          --Line->Level; // Restore indentation level before 'end'
           
           // Parse 'end'
           if (FormatTok && FormatTok->is(Keywords.kw_pascal_end)) {
