@@ -3756,6 +3756,20 @@ void TokenAnnotator::annotate(AnnotatedLine &Line) {
   ExpressionParser ExprParser(Style, Keywords, Line);
   ExprParser.parse();
 
+  // PHASE 1: Pascal inline variable detection
+  if (Style.isPascal()) {
+    // Walk through tokens to detect for/if var sequences
+    for (FormatToken *Tok = Line.First; Tok && Tok->Next; Tok = Tok->Next) {
+      if (Tok->is(tok::kw_for) && Tok->Next && 
+          (Tok->Next->is(Keywords.kw_pascal_var) || Tok->Next->TokenText == "var")) {
+        Tok->Next->setType(TT_PascalForInlineVar);
+      } else if (Tok->is(tok::kw_if) && Tok->Next && 
+                 (Tok->Next->is(Keywords.kw_pascal_var) || Tok->Next->TokenText == "var")) {
+        Tok->Next->setType(TT_PascalIfInlineVar);
+      }
+    }
+  }
+
   if (IsCpp) {
     FormatToken *OpeningParen = nullptr;
     auto *Tok = getFunctionName(Line, OpeningParen);
@@ -5742,6 +5756,25 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     // it is hard to identify them in UnwrappedLineParser.
     if (!Keywords.isVerilogBegin(Right) && Keywords.isVerilogEndOfLabel(Left))
       return true;
+  } else if (Style.isPascal()) {
+    // PHASE 3: Pascal inline variable break prevention
+    // Never break between for/if and inline var
+    if (Left.isOneOf(tok::kw_for, tok::kw_if) && 
+        Right.isOneOf(TT_PascalForInlineVar, TT_PascalIfInlineVar)) {
+      return false;
+    }
+    
+    // Never break after inline var before the identifier
+    if (Left.isOneOf(TT_PascalForInlineVar, TT_PascalIfInlineVar) &&
+        Right.is(tok::identifier)) {
+      return false;
+    }
+    
+    // Never break after inline var before assignment
+    if (Left.isOneOf(TT_PascalForInlineVar, TT_PascalIfInlineVar) &&
+        Right.is(tok::identifier)) {
+      return false;
+    }
   } else if (Style.BreakAdjacentStringLiterals &&
              (IsCpp || Style.isProto() || Style.isTableGen())) {
     if (Left.isStringLiteral() && Right.isStringLiteral())

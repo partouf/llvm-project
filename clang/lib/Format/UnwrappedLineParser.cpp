@@ -1484,6 +1484,24 @@ void UnwrappedLineParser::parseStructuralElement(
       parseBlock(/*MustBeDeclaration=*/false);
       return;
     }
+    // PHASE 2: Handle Pascal var keyword context-aware
+    if (FormatTok->is(Keywords.kw_pascal_var) || FormatTok->TokenText == "var") {
+      // Check if this is an inline var (marked in Phase 1)
+      if (FormatTok->is(TT_PascalForInlineVar) || 
+          FormatTok->is(TT_PascalIfInlineVar)) {
+        // Don't treat as declaration block - continue parsing inline
+        // The var token stays inline as part of the for/if statement
+        nextToken(); // consume 'var'
+        // Continue with normal expression parsing - don't create new line
+        return;
+      } else if (FormatTok->is(Keywords.kw_pascal_var)) {
+        // Regular var declaration - use existing parsing logic
+        FormatTok->setFinalizedType(TT_PascalVarDeclaration);
+        parsePascalVarDeclaration();
+        return;
+      }
+      // If it's just "var" text but not a Pascal keyword, fall through to default parsing
+    }
     // For now, just use default parsing for other Pascal constructs
     // TODO: Re-enable specific Pascal parsing after debugging
   }
