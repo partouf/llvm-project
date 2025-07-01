@@ -1491,7 +1491,7 @@ void UnwrappedLineParser::parseStructuralElement(
     }
     if (FormatTok->is(Keywords.kw_pascal_begin)) {
       FormatTok->setFinalizedType(TT_PascalBegin);
-      parseBlock(/*MustBeDeclaration=*/false);
+      parseBlock(/*MustBeDeclaration=*/false, /*AddLevels=*/1u);
       return;
     }
     // Handle Pascal type declarations 
@@ -5214,7 +5214,7 @@ void UnwrappedLineParser::parsePascalProcedureDeclaration() {
   // Parse procedure/function body if present
   if (FormatTok && FormatTok->is(Keywords.kw_pascal_begin)) {
     FormatTok->setFinalizedType(TT_PascalBegin);
-    parseBlock(/*MustBeDeclaration=*/false);
+    parseBlock(/*MustBeDeclaration=*/false, /*AddLevels=*/0u);
     if (FormatTok && FormatTok->is(tok::semi)) {
       nextToken();
       addUnwrappedLine();
