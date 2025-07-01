@@ -5356,8 +5356,9 @@ void UnwrappedLineParser::parsePascalTypeDeclaration() {
               
               addUnwrappedLine(); // Break after property name: type
               
-              // Parse read/write clauses with additional indentation
-              ++Line->Level; // Indent read/write clauses
+              // Parse read/write clauses with additional indentation (2 more spaces)
+              ++Line->Level; 
+              ++Line->Level; // Double indent for read/write clauses to get 6 spaces total
               if (FormatTok && FormatTok->is(Keywords.kw_pascal_read)) {
                 nextToken(); // 'read'
                 if (FormatTok && FormatTok->is(tok::identifier))
@@ -5371,7 +5372,8 @@ void UnwrappedLineParser::parsePascalTypeDeclaration() {
               
               if (FormatTok && FormatTok->is(tok::semi)) {
                 nextToken();
-                --Line->Level; // Restore level before ending property
+                --Line->Level; // Restore first level
+                --Line->Level; // Restore second level before ending property
                 addUnwrappedLine();
               }
             } else {
@@ -5417,18 +5419,11 @@ void UnwrappedLineParser::parsePascalUsesDeclaration() {
   nextToken();
   addUnwrappedLine();
 
-  // Indent the uses list items
+  // Indent uses list items
   ++Line->Level;
-
-  // Force first unit onto new line with indentation
-  bool firstUnit = true;
-
+  
   // Parse the list of units with proper indentation
   while (FormatTok && !eof() && !FormatTok->is(tok::semi)) {
-    if (firstUnit) {
-      firstUnit = false;
-      // Don't add line here, just process the first unit with indentation
-    }
     // Skip to next comma or semicolon
     while (FormatTok && !FormatTok->isOneOf(tok::comma, tok::semi)) {
       // Mark dotted unit names to prevent breaking
@@ -5457,8 +5452,8 @@ void UnwrappedLineParser::parsePascalUsesDeclaration() {
   
   if (FormatTok && FormatTok->is(tok::semi)) {
     nextToken();
-    --Line->Level; // Restore level after uses clause
     addUnwrappedLine();
+    --Line->Level; // Restore level after uses clause
   }
 }
 
