@@ -5345,37 +5345,8 @@ void UnwrappedLineParser::parsePascalTypeDeclaration() {
               ++Line->Level; // Indent members within visibility section
               InVisibilitySection = true;
             } else if (FormatTok->is(Keywords.kw_pascal_property)) {
-              // Property declarations with proper read/write clause indentation
-              nextToken(); // 'property'
-              if (FormatTok && FormatTok->is(tok::identifier))
-                nextToken(); // property name
-              if (FormatTok && FormatTok->is(tok::colon))
-                nextToken(); // ':'
-              if (FormatTok && FormatTok->is(tok::identifier))
-                nextToken(); // type
-              
-              addUnwrappedLine(); // Break after property name: type
-              
-              // Parse read/write clauses with additional indentation (2 more spaces)
-              ++Line->Level; 
-              ++Line->Level; // Double indent for read/write clauses to get 6 spaces total
-              if (FormatTok && FormatTok->is(Keywords.kw_pascal_read)) {
-                nextToken(); // 'read'
-                if (FormatTok && FormatTok->is(tok::identifier))
-                  nextToken(); // method name
-                if (FormatTok && FormatTok->is(Keywords.kw_pascal_write)) {
-                  nextToken(); // 'write'
-                  if (FormatTok && FormatTok->is(tok::identifier))
-                    nextToken(); // method name
-                }
-              }
-              
-              if (FormatTok && FormatTok->is(tok::semi)) {
-                nextToken();
-                --Line->Level; // Restore first level
-                --Line->Level; // Restore second level before ending property
-                addUnwrappedLine();
-              }
+              // Property declarations - let normal parsing handle formatting
+              parseStructuralElement();
             } else {
               // Other declarations (procedures, functions, fields)
               parseStructuralElement();
