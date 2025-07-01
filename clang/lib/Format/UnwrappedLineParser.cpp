@@ -816,8 +816,14 @@ FormatToken *UnwrappedLineParser::parseBlock(bool MustBeDeclaration,
   if (eof())
     return IfLBrace;
 
-  if (MacroBlock ? FormatTok->isNot(TT_MacroBlockEnd)
-                 : FormatTok->isNot(tok::r_brace)) {
+  bool IsClosingToken = MacroBlock ? FormatTok->is(TT_MacroBlockEnd) 
+                                    : FormatTok->is(tok::r_brace);
+  // Handle Pascal end keyword as closing token
+  if (Style.isPascal() && FormatTok->is(Keywords.kw_pascal_end)) {
+    IsClosingToken = true;
+  }
+  
+  if (!IsClosingToken) {
     Line->Level = InitialLevel;
     FormatTok->setBlockKind(BK_Block);
     return IfLBrace;
@@ -827,10 +833,15 @@ FormatToken *UnwrappedLineParser::parseBlock(bool MustBeDeclaration,
     FormatTok->setBlockKind(BK_Block);
     if (Tok->is(TT_NamespaceLBrace))
       FormatTok->setFinalizedType(TT_NamespaceRBrace);
+  } else if (Style.isPascal() && FormatTok->is(Keywords.kw_pascal_end)) {
+    FormatTok->setBlockKind(BK_Block);
+    // Set Pascal end type for proper formatting
+    FormatTok->setFinalizedType(TT_PascalEnd);
   }
 
   const bool IsFunctionRBrace =
-      FormatTok->is(tok::r_brace) && Tok->is(TT_FunctionLBrace);
+      (FormatTok->is(tok::r_brace) && Tok->is(TT_FunctionLBrace)) ||
+      (Style.isPascal() && FormatTok->is(Keywords.kw_pascal_end) && Tok->is(TT_PascalBegin));
 
   auto RemoveBraces = [=]() mutable {
     if (!SimpleBlock)
@@ -5216,12 +5227,30 @@ void UnwrappedLineParser::parsePascalProcedureDeclaration() {
   if (FormatTok && FormatTok->is(Keywords.kw_pascal_begin)) {
     FormatTok->setFinalizedType(TT_PascalBegin);
     
-    // Don't increment level before parseBlock - let parseBlock handle indentation
-    parseBlock(/*MustBeDeclaration=*/false, /*AddLevels=*/1u, /*MunchSemi=*/false);
+    // Don't call parseBlock here - just parse the begin/end content directly
+    nextToken(); // consume 'begin'
+    addUnwrappedLine();
     
-    if (FormatTok && FormatTok->is(tok::semi)) {
+    // Increment level for the body content
+    ++Line->Level;
+    
+    // Parse statements until 'end'
+    while (FormatTok && !FormatTok->is(Keywords.kw_pascal_end) && !eof()) {
+      parseStructuralElement();
+    }
+    
+    // Decrement level back
+    --Line->Level;
+    
+    // Parse 'end' keyword
+    if (FormatTok && FormatTok->is(Keywords.kw_pascal_end)) {
       nextToken();
-      addUnwrappedLine();
+      // Don't add unwrapped line yet - check for semicolon first
+      
+      if (FormatTok && FormatTok->is(tok::semi)) {
+        nextToken(); // consume semicolon on same line as 'end'
+      }
+      addUnwrappedLine(); // Now add the line with both 'end' and ';'
     }
   }
 }
@@ -5276,6 +5305,9 @@ void UnwrappedLineParser::parsePascalTypeDeclaration() {
   nextToken();
   addUnwrappedLine();
 
+  // Indent type declarations
+  ++Line->Level;
+
   // Parse type declarations until we hit a keyword that ends the section
   while (FormatTok && !eof() &&
          !FormatTok->isOneOf(Keywords.kw_pascal_var, Keywords.kw_pascal_const,
@@ -5298,14 +5330,20 @@ void UnwrappedLineParser::parsePascalTypeDeclaration() {
           
           addUnwrappedLine(); // Break after class(...) declaration
           
-          // Parse class members with proper indentation
-          ++Line->Level; // Indent class members
+          // Parse class members - visibility sections should be at same level as class
+          bool InVisibilitySection = false;
           while (FormatTok && !eof() && !FormatTok->is(Keywords.kw_pascal_end)) {
             if (FormatTok->isOneOf(Keywords.kw_pascal_private, Keywords.kw_pascal_public,
                                    Keywords.kw_pascal_protected, Keywords.kw_pascal_published)) {
-              // Visibility sections on their own lines
+              // Handle change of visibility level
+              if (InVisibilitySection) {
+                --Line->Level; // Unindent from previous section members
+              }
+              // Visibility sections on their own lines at class level
               nextToken();
               addUnwrappedLine();
+              ++Line->Level; // Indent members within visibility section
+              InVisibilitySection = true;
             } else if (FormatTok->is(Keywords.kw_pascal_property)) {
               // Property declarations with proper read/write clause indentation
               nextToken(); // 'property'
@@ -5340,7 +5378,10 @@ void UnwrappedLineParser::parsePascalTypeDeclaration() {
             }
           }
           
-          --Line->Level; // Restore indentation level before 'end'
+          // Restore visibility section indentation if needed
+          if (InVisibilitySection) {
+            --Line->Level;
+          }
           
           // Parse 'end'
           if (FormatTok && FormatTok->is(Keywords.kw_pascal_end)) {
@@ -5363,6 +5404,9 @@ void UnwrappedLineParser::parsePascalTypeDeclaration() {
       nextToken();
     }
   }
+  
+  // Restore level after type section
+  --Line->Level;
 }
 
 void UnwrappedLineParser::parsePascalUsesDeclaration() {
@@ -5370,6 +5414,9 @@ void UnwrappedLineParser::parsePascalUsesDeclaration() {
   assert(FormatTok->is(Keywords.kw_pascal_uses));
   nextToken();
   addUnwrappedLine();
+
+  // Indent the uses list items
+  ++Line->Level;
 
   // Parse the list of units with proper indentation
   while (FormatTok && !eof() && !FormatTok->is(tok::semi)) {
@@ -5401,6 +5448,7 @@ void UnwrappedLineParser::parsePascalUsesDeclaration() {
   
   if (FormatTok && FormatTok->is(tok::semi)) {
     nextToken();
+    --Line->Level; // Restore level after uses clause
     addUnwrappedLine();
   }
 }
