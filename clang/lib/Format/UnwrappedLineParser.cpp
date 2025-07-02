@@ -5411,61 +5411,18 @@ void UnwrappedLineParser::parsePascalTypeDeclaration() {
         llvm::errs() << "DEBUG: Found type declaration '" << typeName << " = ...'\n";
         nextToken(); // skip '='
         
-        // COMMENTED OUT: Interface declaration parsing that might cause hanging
-        /*
-        // Check for interface declaration
+        // Check for interface declaration - using specialized parser
         if (FormatTok && (FormatTok->is(Keywords.kw_pascal_interface) || 
                           (Style.isPascal() && FormatTok->TokenText == "interface"))) {
           nextToken(); // skip 'interface'
           addUnwrappedLine(); // Break after interface declaration
           
-          // Use ScopedLineState pattern for proper level management
-          // Save current line state and create baseline for interface content
-          unsigned BaselineLevel = Line->Level;
-          
-          // Create fresh line immediately to ensure first function gets clean state
-          if (!Line->Tokens.empty()) {
-            addUnwrappedLine();
-          }
-          Line = std::make_unique<UnwrappedLine>();
-          Line->Level = BaselineLevel;
-          
-          // Parse interface content with fresh line instances to prevent accumulation
-          while (FormatTok && !eof() && !FormatTok->is(Keywords.kw_pascal_end)) {
-            if (FormatTok->isOneOf(Keywords.kw_pascal_function, Keywords.kw_pascal_procedure)) {
-              // Ensure fresh line state for each function
-              if (!Line->Tokens.empty()) {
-                addUnwrappedLine();
-                Line = std::make_unique<UnwrappedLine>();
-              }
-              Line->Level = BaselineLevel + 1; // Interface functions one level deeper than type declaration
-              
-              // Parse interface function/procedure declaration directly (no body)
-              while (FormatTok && !eof() && !FormatTok->is(tok::semi)) {
-                if (FormatTok->is(tok::l_paren)) {
-                  parseParens();
-                } else {
-                  nextToken();
-                }
-              }
-              if (FormatTok && FormatTok->is(tok::semi)) {
-                nextToken();
-              }
-              addUnwrappedLine();
-            } else {
-              // Handle other interface content (properties, etc.) with normal parsing
-              parseStructuralElement();
-            }
-          }
-          
-          // Ensure we have a fresh line for the 'end' keyword
-          if (!Line->Tokens.empty()) {
-            addUnwrappedLine();
-          }
-          Line = std::make_unique<UnwrappedLine>();
-          Line->Level = BaselineLevel; // 'end' keyword at type declaration level
+          // Parse interface content with specialized function for consistent indentation
+          ++Line->Level; // All interface content one level deeper
+          parsePascalInterfaceContent();
           
           // Parse 'end'
+          --Line->Level; // Restore level for 'end'
           if (FormatTok && FormatTok->is(Keywords.kw_pascal_end)) {
             nextToken();
             if (FormatTok && FormatTok->is(tok::semi))
@@ -5473,9 +5430,8 @@ void UnwrappedLineParser::parsePascalTypeDeclaration() {
             addUnwrappedLine();
           }
         }
-        */
-        // Check for class declaration
-        if (FormatTok && FormatTok->is(Keywords.kw_pascal_class)) {
+        // Check for class declaration - using specialized parser
+        else if (FormatTok && FormatTok->is(Keywords.kw_pascal_class)) {
           nextToken(); // skip 'class'
           
           // Parse inheritance/interface list
@@ -5485,69 +5441,12 @@ void UnwrappedLineParser::parsePascalTypeDeclaration() {
           
           addUnwrappedLine(); // Break after class(...) declaration
           
-          // Parse class members - visibility sections should be at same level as class
-          bool InVisibilitySection = false;
-          while (FormatTok && !eof() && !FormatTok->is(Keywords.kw_pascal_end)) {
-            if (FormatTok->isOneOf(Keywords.kw_pascal_private, Keywords.kw_pascal_public,
-                                   Keywords.kw_pascal_protected, Keywords.kw_pascal_published)) {
-              // Handle change of visibility level  
-              if (InVisibilitySection) {
-                --Line->Level; // Unindent from previous section members
-              }
-              // Ensure visibility sections start on new lines
-              addUnwrappedLine(); // Break before visibility keyword
-              nextToken(); // consume visibility keyword
-              addUnwrappedLine(); // Break after visibility keyword  
-              ++Line->Level; // Indent members within visibility section
-              InVisibilitySection = true;
-            } else if (FormatTok->is(Keywords.kw_pascal_property)) {
-              // Property declarations with configurable formatting
-              if (Style.PascalProperties == FormatStyle::PPS_MultiLine) {
-                // Multi-line property formatting with read/write clauses on separate lines
-                nextToken(); // 'property'
-                if (FormatTok && FormatTok->is(tok::identifier))
-                  nextToken(); // property name
-                if (FormatTok && FormatTok->is(tok::colon))
-                  nextToken(); // ':'
-                if (FormatTok && FormatTok->is(tok::identifier))
-                  nextToken(); // type
-                
-                addUnwrappedLine(); // Break after property name: type
-                
-                // Parse read/write clauses with continuation indentation
-                ++Line->Level; // Add one level for continuation indentation
-                if (FormatTok && FormatTok->is(Keywords.kw_pascal_read)) {
-                  nextToken(); // 'read'
-                  if (FormatTok && FormatTok->is(tok::identifier))
-                    nextToken(); // method name
-                  if (FormatTok && FormatTok->is(Keywords.kw_pascal_write)) {
-                    nextToken(); // 'write'
-                    if (FormatTok && FormatTok->is(tok::identifier))
-                      nextToken(); // method name
-                  }
-                  
-                  if (FormatTok && FormatTok->is(tok::semi)) {
-                    nextToken();
-                  }
-                  addUnwrappedLine(); // Create line with proper indentation
-                }
-                --Line->Level; // Restore level after property
-              } else {
-                // Single-line property formatting (default)
-                parseStructuralElement();
-              }
-            } else {
-              // Other declarations (procedures, functions, fields)
-              parseStructuralElement();
-            }
-          }
-          
-          // Restore visibility section indentation if needed
-          if (InVisibilitySection) {
-            --Line->Level;
-          }
+          // Parse class content with specialized function for visibility handling
+          ++Line->Level; // All class content one level deeper
+          parsePascalClassContent();
           
           // Parse 'end'
+          --Line->Level; // Restore level for 'end'
           if (FormatTok && FormatTok->is(Keywords.kw_pascal_end)) {
             nextToken();
             if (FormatTok && FormatTok->is(tok::semi))
@@ -5614,6 +5513,76 @@ void UnwrappedLineParser::parsePascalUsesDeclaration() {
     nextToken();
     addUnwrappedLine();
     --Line->Level; // Restore level after uses clause
+  }
+}
+
+void UnwrappedLineParser::parsePascalInterfaceContent() {
+  // Parse interface content with consistent indentation for all elements
+  while (FormatTok && !eof() && !FormatTok->is(Keywords.kw_pascal_end)) {
+    if (FormatTok->isOneOf(Keywords.kw_pascal_function, Keywords.kw_pascal_procedure)) {
+      // Parse function/procedure declaration (interface has no body)
+      while (FormatTok && !eof() && !FormatTok->is(tok::semi)) {
+        if (FormatTok->is(tok::l_paren)) {
+          parseParens();
+        } else {
+          nextToken();
+        }
+      }
+      if (FormatTok && FormatTok->is(tok::semi)) {
+        nextToken();
+      }
+      addUnwrappedLine();
+    } else if (FormatTok->is(tok::l_square)) {
+      // GUID attribute - parse it as one unit 
+      while (FormatTok && !eof() && !FormatTok->is(tok::r_square)) {
+        nextToken();
+      }
+      if (FormatTok && FormatTok->is(tok::r_square)) {
+        nextToken();
+      }
+      addUnwrappedLine();
+    } else {
+      // Other interface content (properties, etc.)
+      nextToken();
+      if (FormatTok && FormatTok->is(tok::semi)) {
+        nextToken();
+        addUnwrappedLine();
+      }
+    }
+  }
+}
+
+void UnwrappedLineParser::parsePascalClassContent() {
+  // Parse class content with visibility section handling
+  while (FormatTok && !eof() && !FormatTok->is(Keywords.kw_pascal_end)) {
+    if (FormatTok->isOneOf(Keywords.kw_pascal_private, Keywords.kw_pascal_public,
+                           Keywords.kw_pascal_protected, Keywords.kw_pascal_published)) {
+      // Visibility sections get reduced indentation (one level less than normal class content)
+      --Line->Level; // Reduce indentation for visibility keyword
+      nextToken(); // consume visibility keyword
+      addUnwrappedLine();
+      ++Line->Level; // Restore indentation for subsequent content
+    } else if (FormatTok->isOneOf(Keywords.kw_pascal_function, Keywords.kw_pascal_procedure)) {
+      // Parse function/procedure declaration (class may have body in implementation)
+      while (FormatTok && !eof() && !FormatTok->is(tok::semi)) {
+        if (FormatTok->is(tok::l_paren)) {
+          parseParens();
+        } else {
+          nextToken();
+        }
+      }
+      if (FormatTok && FormatTok->is(tok::semi)) {
+        nextToken();
+      }
+      addUnwrappedLine();
+    } else {
+      // Other class content (fields, properties, etc.)
+      nextToken();
+      if (FormatTok && FormatTok->is(tok::semi)) {
+        nextToken();
+        addUnwrappedLine();
+      }
+    }
   }
 }
 
