@@ -942,17 +942,16 @@ FormatToken *UnwrappedLineParser::parseBlockPascal() {
     parseStructuralElement();
   }
   
-  // Now handle the 'end' token
   if (FormatTok && FormatTok->is(Keywords.kw_pascal_end)) {
     // First decrease level so 'end' is at same level as 'begin'
     --Line->Level;
     assert(Line->Level == InitialLevel);
     
-    nextToken(); // consume 'end'
+    nextToken();
     
     // Check for semicolon or period after end
     if (FormatTok && FormatTok->isOneOf(tok::semi, tok::period)) {
-      nextToken(); // consume ; or .
+      nextToken();
     }
     
     // Add the line with 'end' at the same level as 'begin'
@@ -1547,7 +1546,6 @@ void UnwrappedLineParser::parseStructuralElement(
         FormatTok->is(Keywords.kw_pascal_implementation) ||
         (Style.isPascal() && FormatTok->TokenText == "interface")) {
       
-      // Simple check: if this is the first token on the line, it's a unit section
       bool isUnitSection = Line->Tokens.empty();
       
       if (isUnitSection) {
@@ -1559,7 +1557,6 @@ void UnwrappedLineParser::parseStructuralElement(
                  (Style.isPascal() && FormatTok->TokenText == "interface")) {
         // This interface declaration is already handled by type declaration parsing
         // Don't process it again here to avoid recursive calls and level conflicts
-        // Just continue with normal token processing
         nextToken();
         return;
       }
@@ -1594,7 +1591,7 @@ void UnwrappedLineParser::parseStructuralElement(
           FormatTok->is(TT_PascalIfInlineVar)) {
         // Don't treat as declaration block - continue parsing inline
         // The var token stays inline as part of the for/if statement
-        nextToken(); // consume 'var'
+        nextToken();
         // Continue with normal expression parsing - don't create new line
         return;
       } else if (FormatTok->is(Keywords.kw_pascal_var)) {
@@ -4697,15 +4694,6 @@ void UnwrappedLineParser::addUnwrappedLine(LineLevel AdjustLevel) {
   if (Line->Tokens.empty())
     return;
     
-  // DEBUG: Show line being added for Pascal
-  if (Style.isPascal()) {
-    llvm::errs() << "DEBUG addUnwrappedLine: Level=" << Line->Level 
-                 << " Tokens=" << Line->Tokens.size() << " Content=";
-    for (const auto &Node : Line->Tokens) {
-      llvm::errs() << "'" << Node.Tok->TokenText << "' ";
-    }
-    llvm::errs() << "\n";
-  }
     
   LLVM_DEBUG({
     if (!parsingPPDirective()) {
@@ -4913,12 +4901,6 @@ void UnwrappedLineParser::nextToken(int LevelDifference) {
   if (eof())
     return;
   
-  // DEBUG: Show current token before processing
-  if (Style.isPascal() && FormatTok) {
-    llvm::errs() << "DEBUG nextToken: BEFORE - " << FormatTok->toDebugString() 
-                 << " LevelDiff=" << LevelDifference 
-                 << " Line->Level=" << Line->Level << "\n";
-  }
   
   flushComments(isOnNewLine(*FormatTok));
   pushToken(FormatTok);
@@ -5288,7 +5270,6 @@ void UnwrappedLineParser::parsePascalVarDeclaration() {
     }
   }
   
-  // Restore level after variable declarations
   --Line->Level;
 }
 
@@ -5316,7 +5297,7 @@ void UnwrappedLineParser::parsePascalProcedureDeclaration() {
     FormatTok->setFinalizedType(TT_PascalBegin);
     
     // Don't call parseBlock here - just parse the begin/end content directly
-    nextToken(); // consume 'begin'
+    nextToken();
     addUnwrappedLine();
     
     // Increment level for the body content
@@ -5336,9 +5317,9 @@ void UnwrappedLineParser::parsePascalProcedureDeclaration() {
       // Don't add unwrapped line yet - check for semicolon first
       
       if (FormatTok && FormatTok->is(tok::semi)) {
-        nextToken(); // consume semicolon on same line as 'end'
+        nextToken();
       }
-      addUnwrappedLine(); // Now add the line with both 'end' and ';'
+      addUnwrappedLine();
     }
   }
 }
@@ -5390,7 +5371,6 @@ void UnwrappedLineParser::parsePascalCaseStatement() {
 void UnwrappedLineParser::parsePascalTypeDeclaration() {
   // Pascal type declarations: type TMyClass = class(...) private ... end;
   assert(FormatTok->is(Keywords.kw_pascal_type));
-  llvm::errs() << "DEBUG: parsePascalTypeDeclaration() called\n";
   nextToken();
   addUnwrappedLine();
 
@@ -5408,7 +5388,6 @@ void UnwrappedLineParser::parsePascalTypeDeclaration() {
       std::string typeName = FormatTok->TokenText.str();
       nextToken();
       if (FormatTok && FormatTok->is(tok::equal)) {
-        llvm::errs() << "DEBUG: Found type declaration '" << typeName << " = ...'\n";
         nextToken(); // skip '='
         
         // Check for interface declaration - using specialized parser
@@ -5422,7 +5401,7 @@ void UnwrappedLineParser::parsePascalTypeDeclaration() {
           parsePascalInterfaceContent();
           
           // Parse 'end'
-          --Line->Level; // Restore level for 'end'
+          --Line->Level;
           if (FormatTok && FormatTok->is(Keywords.kw_pascal_end)) {
             nextToken();
             if (FormatTok && FormatTok->is(tok::semi))
@@ -5446,7 +5425,7 @@ void UnwrappedLineParser::parsePascalTypeDeclaration() {
           parsePascalClassContent();
           
           // Parse 'end'
-          --Line->Level; // Restore level for 'end'
+          --Line->Level;
           if (FormatTok && FormatTok->is(Keywords.kw_pascal_end)) {
             nextToken();
             if (FormatTok && FormatTok->is(tok::semi))
@@ -5454,7 +5433,6 @@ void UnwrappedLineParser::parsePascalTypeDeclaration() {
             addUnwrappedLine();
           }
         } else {
-          // Simple type declaration, skip to semicolon
           while (FormatTok && !FormatTok->is(tok::semi))
             nextToken();
           if (FormatTok && FormatTok->is(tok::semi)) {
@@ -5468,7 +5446,6 @@ void UnwrappedLineParser::parsePascalTypeDeclaration() {
     }
   }
   
-  // Restore level after type section
   --Line->Level;
 }
 
@@ -5512,7 +5489,7 @@ void UnwrappedLineParser::parsePascalUsesDeclaration() {
   if (FormatTok && FormatTok->is(tok::semi)) {
     nextToken();
     addUnwrappedLine();
-    --Line->Level; // Restore level after uses clause
+    --Line->Level;
   }
 }
 
@@ -5558,10 +5535,10 @@ void UnwrappedLineParser::parsePascalClassContent() {
     if (FormatTok->isOneOf(Keywords.kw_pascal_private, Keywords.kw_pascal_public,
                            Keywords.kw_pascal_protected, Keywords.kw_pascal_published)) {
       // Visibility sections get reduced indentation (one level less than normal class content)
-      --Line->Level; // Reduce indentation for visibility keyword
-      nextToken(); // consume visibility keyword
+      --Line->Level;
+      nextToken();
       addUnwrappedLine();
-      ++Line->Level; // Restore indentation for subsequent content
+      ++Line->Level;
     } else if (FormatTok->isOneOf(Keywords.kw_pascal_function, Keywords.kw_pascal_procedure)) {
       // Parse function/procedure declaration (class may have body in implementation)
       while (FormatTok && !eof() && !FormatTok->is(tok::semi)) {
@@ -5578,7 +5555,6 @@ void UnwrappedLineParser::parsePascalClassContent() {
     } else if (FormatTok->is(Keywords.kw_pascal_property)) {
       // Property declarations with configurable formatting
       if (Style.PascalProperties == FormatStyle::PPS_MultiLine) {
-        // Multi-line property formatting with read/write clauses on separate lines
         nextToken(); // 'property'
         if (FormatTok && FormatTok->is(tok::identifier))
           nextToken(); // property name
@@ -5606,9 +5582,8 @@ void UnwrappedLineParser::parsePascalClassContent() {
           }
           addUnwrappedLine(); // Create line with proper indentation
         }
-        --Line->Level; // Restore level after property
+        --Line->Level;
       } else {
-        // Single-line property formatting (default)
         while (FormatTok && !eof() && !FormatTok->is(tok::semi)) {
           nextToken();
         }
@@ -5618,7 +5593,6 @@ void UnwrappedLineParser::parsePascalClassContent() {
         addUnwrappedLine();
       }
     } else {
-      // Other class content (fields, etc.)
       nextToken();
       if (FormatTok && FormatTok->is(tok::semi)) {
         nextToken();
