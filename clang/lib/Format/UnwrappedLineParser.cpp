@@ -5575,8 +5575,50 @@ void UnwrappedLineParser::parsePascalClassContent() {
         nextToken();
       }
       addUnwrappedLine();
+    } else if (FormatTok->is(Keywords.kw_pascal_property)) {
+      // Property declarations with configurable formatting
+      if (Style.PascalProperties == FormatStyle::PPS_MultiLine) {
+        // Multi-line property formatting with read/write clauses on separate lines
+        nextToken(); // 'property'
+        if (FormatTok && FormatTok->is(tok::identifier))
+          nextToken(); // property name
+        if (FormatTok && FormatTok->is(tok::colon))
+          nextToken(); // ':'
+        if (FormatTok && FormatTok->is(tok::identifier))
+          nextToken(); // type
+        
+        addUnwrappedLine(); // Break after property name: type
+        
+        // Parse read/write clauses with continuation indentation
+        ++Line->Level; // Add one level for continuation indentation
+        if (FormatTok && FormatTok->is(Keywords.kw_pascal_read)) {
+          nextToken(); // 'read'
+          if (FormatTok && FormatTok->is(tok::identifier))
+            nextToken(); // method name
+          if (FormatTok && FormatTok->is(Keywords.kw_pascal_write)) {
+            nextToken(); // 'write'
+            if (FormatTok && FormatTok->is(tok::identifier))
+              nextToken(); // method name
+          }
+          
+          if (FormatTok && FormatTok->is(tok::semi)) {
+            nextToken();
+          }
+          addUnwrappedLine(); // Create line with proper indentation
+        }
+        --Line->Level; // Restore level after property
+      } else {
+        // Single-line property formatting (default)
+        while (FormatTok && !eof() && !FormatTok->is(tok::semi)) {
+          nextToken();
+        }
+        if (FormatTok && FormatTok->is(tok::semi)) {
+          nextToken();
+        }
+        addUnwrappedLine();
+      }
     } else {
-      // Other class content (fields, properties, etc.)
+      // Other class content (fields, etc.)
       nextToken();
       if (FormatTok && FormatTok->is(tok::semi)) {
         nextToken();
