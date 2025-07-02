@@ -1992,7 +1992,6 @@ struct AdditionalKeywords {
   /// anything else.
   bool isPascalKeyword(const FormatToken &Tok) const {
     switch (Tok.Tok.getKind()) {
-    // Pascal has fewer built-in C++ keywords that overlap
     case tok::kw_case:
     case tok::kw_const:
     case tok::kw_default:

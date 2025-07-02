@@ -327,9 +327,7 @@ void FormatTokenLexer::tryMergePreviousTokens() {
     // Pascal assignment operator :=
     static const tok::TokenKind PascalAssignmentOperator[] = {tok::colon, tok::equal};
     if (tryMergeTokens(PascalAssignmentOperator, TT_PascalAssignment)) {
-      // Treat as assignment with proper precedence
       Tokens.back()->ForcedPrecedence = prec::Assignment;
-      // Keep the original token kind as assignment for proper handling
       Tokens.back()->Tok.setKind(tok::equal);
       return;
     }

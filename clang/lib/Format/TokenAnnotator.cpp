@@ -5775,7 +5775,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       return false;
     }
     
-    // Never break dotted identifiers in Pascal (e.g., GDK.EmailMessage)
+    // Never break dotted identifiers in Pascal (e.g., System.SysUtils)
     // This must come first to prevent any other rules from breaking dotted names
     if ((Left.is(tok::identifier) && Right.is(tok::period)) ||
         (Left.is(tok::period) && Right.is(tok::identifier))) {
@@ -6270,7 +6270,7 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       return false;
     }
     
-    // Never break dotted identifiers in Pascal (e.g., GDK.EmailMessage)
+    // Never break dotted identifiers in Pascal (e.g., System.SysUtils)
     if ((Left.is(tok::identifier) && Right.is(tok::period)) ||
         (Left.is(tok::period) && Right.is(tok::identifier))) {
       return false;

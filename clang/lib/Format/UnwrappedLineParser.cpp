@@ -919,11 +919,10 @@ FormatToken *UnwrappedLineParser::parseBlock(bool MustBeDeclaration,
 }
 
 FormatToken *UnwrappedLineParser::parseBlockPascal() {
-  // Pascal block parsing - mimics C++ parseBlock for Pascal begin/end
+  // Pascal block parsing for begin/end
   
   assert(FormatTok->is(Keywords.kw_pascal_begin) && "'begin' expected");
   
-  // Capture the current level (like C++ parseBlock line 779)
   const unsigned InitialLevel = Line->Level;
   
   // Consume 'begin' and add to line
@@ -1476,16 +1475,6 @@ void UnwrappedLineParser::readTokenWithJavaScriptASI() {
 void UnwrappedLineParser::parseStructuralElement(
     const FormatToken *OpeningBrace, IfStmtKind *IfKind,
     FormatToken **IfLeftBrace, bool *HasDoWhile, bool *HasLabel) {
-  // Pascal: Skip 'end' that should be handled by parseBlockPascal 
-  // But allow unit termination 'end.' to be processed normally
-  // COMMENTED OUT: This was causing infinite loop
-  /*if (Style.isPascal() && FormatTok && FormatTok->is(Keywords.kw_pascal_end)) {
-    // Only skip if this is NOT unit termination (not followed by period)
-    if (!FormatTok->Next || !FormatTok->Next->is(tok::period)) {
-      return; // Let parseBlockPascal handle this
-    }
-    // Fall through to process unit termination 'end.' normally
-  }*/
   
   if (Style.isTableGen() && FormatTok->is(tok::pp_include)) {
     nextToken();
@@ -1526,7 +1515,7 @@ void UnwrappedLineParser::parseStructuralElement(
       }
     }
   } else if (Style.isPascal()) {
-    // Handle Pascal-specific constructs - simplified for now
+    // Handle Pascal-specific constructs
     if (FormatTok->is(Keywords.kw_pascal_program) ||
         FormatTok->is(Keywords.kw_pascal_unit)) {
       FormatTok->setFinalizedType(TT_PascalProgramDeclaration);
@@ -1600,7 +1589,6 @@ void UnwrappedLineParser::parseStructuralElement(
         parsePascalVarDeclaration();
         return;
       }
-      // If it's just "var" text but not a Pascal keyword, fall through to default parsing
     }
   }
 
