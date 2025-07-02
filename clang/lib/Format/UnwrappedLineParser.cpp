@@ -1477,10 +1477,16 @@ void UnwrappedLineParser::readTokenWithJavaScriptASI() {
 void UnwrappedLineParser::parseStructuralElement(
     const FormatToken *OpeningBrace, IfStmtKind *IfKind,
     FormatToken **IfLeftBrace, bool *HasDoWhile, bool *HasLabel) {
-  // Pascal: Don't process 'end' here - it should be handled by parseBlockPascal
-  if (Style.isPascal() && FormatTok && FormatTok->is(Keywords.kw_pascal_end)) {
-    return;
-  }
+  // Pascal: Skip 'end' that should be handled by parseBlockPascal 
+  // But allow unit termination 'end.' to be processed normally
+  // COMMENTED OUT: This was causing infinite loop
+  /*if (Style.isPascal() && FormatTok && FormatTok->is(Keywords.kw_pascal_end)) {
+    // Only skip if this is NOT unit termination (not followed by period)
+    if (!FormatTok->Next || !FormatTok->Next->is(tok::period)) {
+      return; // Let parseBlockPascal handle this
+    }
+    // Fall through to process unit termination 'end.' normally
+  }*/
   
   if (Style.isTableGen() && FormatTok->is(tok::pp_include)) {
     nextToken();
@@ -5395,7 +5401,8 @@ void UnwrappedLineParser::parsePascalTypeDeclaration() {
   while (FormatTok && !eof() &&
          !FormatTok->isOneOf(Keywords.kw_pascal_var, Keywords.kw_pascal_const,
                              Keywords.kw_pascal_procedure, Keywords.kw_pascal_function,
-                             Keywords.kw_pascal_implementation, Keywords.kw_pascal_begin)) {
+                             Keywords.kw_pascal_implementation, Keywords.kw_pascal_begin,
+                             Keywords.kw_pascal_end)) {
     if (FormatTok->is(tok::identifier)) {
       // Parse type name
       std::string typeName = FormatTok->TokenText.str();
@@ -5404,6 +5411,8 @@ void UnwrappedLineParser::parsePascalTypeDeclaration() {
         llvm::errs() << "DEBUG: Found type declaration '" << typeName << " = ...'\n";
         nextToken(); // skip '='
         
+        // COMMENTED OUT: Interface declaration parsing that might cause hanging
+        /*
         // Check for interface declaration
         if (FormatTok && (FormatTok->is(Keywords.kw_pascal_interface) || 
                           (Style.isPascal() && FormatTok->TokenText == "interface"))) {
@@ -5464,8 +5473,9 @@ void UnwrappedLineParser::parsePascalTypeDeclaration() {
             addUnwrappedLine();
           }
         }
+        */
         // Check for class declaration
-        else if (FormatTok && FormatTok->is(Keywords.kw_pascal_class)) {
+        if (FormatTok && FormatTok->is(Keywords.kw_pascal_class)) {
           nextToken(); // skip 'class'
           
           // Parse inheritance/interface list
