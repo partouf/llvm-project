@@ -129,6 +129,7 @@ private:
                           unsigned AddLevels = 1u, bool MunchSemi = true,
                           bool KeepBraces = true, IfStmtKind *IfKind = nullptr,
                           bool UnindentWhitesmithsBraces = false);
+  FormatToken *parseBlockPascal();
   void parseChildBlock();
   void parsePPDirective();
   void parsePPDefine();

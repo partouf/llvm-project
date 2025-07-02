@@ -5488,6 +5488,14 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       return false;  // No space before Pascal variable colons
     return true;
   }
+  
+  // Pascal-specific spacing rules
+  if (Style.isPascal()) {
+    // No space between end and . (end.)
+    if (Left.is(tok::r_brace) && Right.is(tok::period))
+      return false;
+  }
+  
   // Do not merge "- -" into "--".
   if ((Left.isOneOf(tok::minus, tok::minusminus) &&
        Right.isOneOf(tok::minus, tok::minusminus)) ||

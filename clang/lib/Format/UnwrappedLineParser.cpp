@@ -818,10 +818,6 @@ FormatToken *UnwrappedLineParser::parseBlock(bool MustBeDeclaration,
 
   bool IsClosingToken = MacroBlock ? FormatTok->is(TT_MacroBlockEnd) 
                                     : FormatTok->is(tok::r_brace);
-  // Handle Pascal end keyword as closing token
-  if (Style.isPascal() && FormatTok->is(Keywords.kw_pascal_end)) {
-    IsClosingToken = true;
-  }
   
   if (!IsClosingToken) {
     Line->Level = InitialLevel;
@@ -833,15 +829,10 @@ FormatToken *UnwrappedLineParser::parseBlock(bool MustBeDeclaration,
     FormatTok->setBlockKind(BK_Block);
     if (Tok->is(TT_NamespaceLBrace))
       FormatTok->setFinalizedType(TT_NamespaceRBrace);
-  } else if (Style.isPascal() && FormatTok->is(Keywords.kw_pascal_end)) {
-    FormatTok->setBlockKind(BK_Block);
-    // Set Pascal end type for proper formatting
-    FormatTok->setFinalizedType(TT_PascalEnd);
   }
 
   const bool IsFunctionRBrace =
-      (FormatTok->is(tok::r_brace) && Tok->is(TT_FunctionLBrace)) ||
-      (Style.isPascal() && FormatTok->is(Keywords.kw_pascal_end) && Tok->is(TT_PascalBegin));
+      (FormatTok->is(tok::r_brace) && Tok->is(TT_FunctionLBrace));
 
   auto RemoveBraces = [=]() mutable {
     if (!SimpleBlock)
@@ -925,6 +916,53 @@ FormatToken *UnwrappedLineParser::parseBlock(bool MustBeDeclaration,
   }
 
   return IfLBrace;
+}
+
+FormatToken *UnwrappedLineParser::parseBlockPascal() {
+  // Pascal block parsing - mimics C++ parseBlock for Pascal begin/end
+  
+  assert(FormatTok->is(Keywords.kw_pascal_begin) && "'begin' expected");
+  
+  // Capture the current level (like C++ parseBlock line 779)
+  const unsigned InitialLevel = Line->Level;
+  
+  // Consume 'begin' and add to line
+  nextToken();
+  
+  // If begin is not alone on the line, break after it
+  if (CommentsBeforeNextToken.empty()) {
+    addUnwrappedLine();
+  }
+  
+  // Increase level for block content (like C++ parseBlock)
+  ++Line->Level;
+  
+  // Parse block content until we find 'end'
+  while (FormatTok && !eof() && !FormatTok->is(Keywords.kw_pascal_end)) {
+    parseStructuralElement();
+  }
+  
+  // Now handle the 'end' token
+  if (FormatTok && FormatTok->is(Keywords.kw_pascal_end)) {
+    // First decrease level so 'end' is at same level as 'begin'
+    --Line->Level;
+    assert(Line->Level == InitialLevel);
+    
+    nextToken(); // consume 'end'
+    
+    // Check for semicolon or period after end
+    if (FormatTok && FormatTok->isOneOf(tok::semi, tok::period)) {
+      nextToken(); // consume ; or .
+    }
+    
+    // Add the line with 'end' at the same level as 'begin'
+    addUnwrappedLine();
+    
+    // Level is already correctly set for whatever comes after
+    Line->Level = InitialLevel;
+  }
+  
+  return nullptr;
 }
 
 static bool isGoogScope(const UnwrappedLine &Line) {
@@ -1439,6 +1477,11 @@ void UnwrappedLineParser::readTokenWithJavaScriptASI() {
 void UnwrappedLineParser::parseStructuralElement(
     const FormatToken *OpeningBrace, IfStmtKind *IfKind,
     FormatToken **IfLeftBrace, bool *HasDoWhile, bool *HasLabel) {
+  // Pascal: Don't process 'end' here - it should be handled by parseBlockPascal
+  if (Style.isPascal() && FormatTok && FormatTok->is(Keywords.kw_pascal_end)) {
+    return;
+  }
+  
   if (Style.isTableGen() && FormatTok->is(tok::pp_include)) {
     nextToken();
     if (FormatTok->is(tok::string_literal))
@@ -1508,32 +1551,16 @@ void UnwrappedLineParser::parseStructuralElement(
         return;
       } else if (FormatTok->is(Keywords.kw_pascal_interface) || 
                  (Style.isPascal() && FormatTok->TokenText == "interface")) {
-        // This is an interface type declaration (e.g., "ICalculator = interface")
-        // Consume the interface keyword first
+        // This interface declaration is already handled by type declaration parsing
+        // Don't process it again here to avoid recursive calls and level conflicts
+        // Just continue with normal token processing
         nextToken();
-        
-        // Check if the next token is a GUID attribute
-        if (FormatTok && FormatTok->is(tok::l_square)) {
-          // Break line after interface keyword
-          addUnwrappedLine();
-          ++Line->Level; // Indent the attribute
-          
-          // Parse the attribute on its own line
-          while (FormatTok && !FormatTok->is(tok::r_square)) {
-            nextToken();
-          }
-          if (FormatTok && FormatTok->is(tok::r_square)) {
-            nextToken(); // consume ']'
-          }
-          addUnwrappedLine(); // Break line after attribute
-          --Line->Level; // Reset level for subsequent parsing
-        }
         return;
       }
     }
     if (FormatTok->is(Keywords.kw_pascal_begin)) {
       FormatTok->setFinalizedType(TT_PascalBegin);
-      parseBlock(/*MustBeDeclaration=*/false, /*AddLevels=*/1u);
+      parseBlockPascal();
       return;
     }
     // Handle Pascal type declarations 
@@ -4663,6 +4690,17 @@ bool UnwrappedLineParser::containsExpansion(const UnwrappedLine &Line) const {
 void UnwrappedLineParser::addUnwrappedLine(LineLevel AdjustLevel) {
   if (Line->Tokens.empty())
     return;
+    
+  // DEBUG: Show line being added for Pascal
+  if (Style.isPascal()) {
+    llvm::errs() << "DEBUG addUnwrappedLine: Level=" << Line->Level 
+                 << " Tokens=" << Line->Tokens.size() << " Content=";
+    for (const auto &Node : Line->Tokens) {
+      llvm::errs() << "'" << Node.Tok->TokenText << "' ";
+    }
+    llvm::errs() << "\n";
+  }
+    
   LLVM_DEBUG({
     if (!parsingPPDirective()) {
       llvm::dbgs() << "Adding unwrapped line:\n";
@@ -4868,6 +4906,14 @@ void UnwrappedLineParser::flushComments(bool NewlineBeforeNext) {
 void UnwrappedLineParser::nextToken(int LevelDifference) {
   if (eof())
     return;
+  
+  // DEBUG: Show current token before processing
+  if (Style.isPascal() && FormatTok) {
+    llvm::errs() << "DEBUG nextToken: BEFORE - " << FormatTok->toDebugString() 
+                 << " LevelDiff=" << LevelDifference 
+                 << " Line->Level=" << Line->Level << "\n";
+  }
+  
   flushComments(isOnNewLine(*FormatTok));
   pushToken(FormatTok);
   FormatToken *Previous = FormatTok;
@@ -5198,6 +5244,9 @@ void UnwrappedLineParser::parsePascalVarDeclaration() {
   nextToken();
   addUnwrappedLine();
 
+  // Indent variable declarations
+  ++Line->Level;
+
   // Parse variable declarations until we hit a keyword that ends the section
   while (FormatTok && !eof() &&
          !FormatTok->isOneOf(Keywords.kw_pascal_begin, Keywords.kw_pascal_procedure,
@@ -5232,6 +5281,9 @@ void UnwrappedLineParser::parsePascalVarDeclaration() {
       nextToken();
     }
   }
+  
+  // Restore level after variable declarations
+  --Line->Level;
 }
 
 void UnwrappedLineParser::parsePascalProcedureDeclaration() {
@@ -5332,6 +5384,7 @@ void UnwrappedLineParser::parsePascalCaseStatement() {
 void UnwrappedLineParser::parsePascalTypeDeclaration() {
   // Pascal type declarations: type TMyClass = class(...) private ... end;
   assert(FormatTok->is(Keywords.kw_pascal_type));
+  llvm::errs() << "DEBUG: parsePascalTypeDeclaration() called\n";
   nextToken();
   addUnwrappedLine();
 
@@ -5345,8 +5398,10 @@ void UnwrappedLineParser::parsePascalTypeDeclaration() {
                              Keywords.kw_pascal_implementation, Keywords.kw_pascal_begin)) {
     if (FormatTok->is(tok::identifier)) {
       // Parse type name
+      std::string typeName = FormatTok->TokenText.str();
       nextToken();
       if (FormatTok && FormatTok->is(tok::equal)) {
+        llvm::errs() << "DEBUG: Found type declaration '" << typeName << " = ...'\n";
         nextToken(); // skip '='
         
         // Check for interface declaration
@@ -5355,14 +5410,51 @@ void UnwrappedLineParser::parsePascalTypeDeclaration() {
           nextToken(); // skip 'interface'
           addUnwrappedLine(); // Break after interface declaration
           
-          // Parse interface members - use simpler block-like approach
-          while (FormatTok && !eof() && !FormatTok->is(Keywords.kw_pascal_end)) {
-            // Force consistent level for interface members
-            unsigned savedLevel = Line->Level;
-            Line->Level = savedLevel + 1;
-            parseStructuralElement();
-            Line->Level = savedLevel;
+          // Use ScopedLineState pattern for proper level management
+          // Save current line state and create baseline for interface content
+          unsigned BaselineLevel = Line->Level;
+          
+          // Create fresh line immediately to ensure first function gets clean state
+          if (!Line->Tokens.empty()) {
+            addUnwrappedLine();
           }
+          Line = std::make_unique<UnwrappedLine>();
+          Line->Level = BaselineLevel;
+          
+          // Parse interface content with fresh line instances to prevent accumulation
+          while (FormatTok && !eof() && !FormatTok->is(Keywords.kw_pascal_end)) {
+            if (FormatTok->isOneOf(Keywords.kw_pascal_function, Keywords.kw_pascal_procedure)) {
+              // Ensure fresh line state for each function
+              if (!Line->Tokens.empty()) {
+                addUnwrappedLine();
+                Line = std::make_unique<UnwrappedLine>();
+              }
+              Line->Level = BaselineLevel + 1; // Interface functions one level deeper than type declaration
+              
+              // Parse interface function/procedure declaration directly (no body)
+              while (FormatTok && !eof() && !FormatTok->is(tok::semi)) {
+                if (FormatTok->is(tok::l_paren)) {
+                  parseParens();
+                } else {
+                  nextToken();
+                }
+              }
+              if (FormatTok && FormatTok->is(tok::semi)) {
+                nextToken();
+              }
+              addUnwrappedLine();
+            } else {
+              // Handle other interface content (properties, etc.) with normal parsing
+              parseStructuralElement();
+            }
+          }
+          
+          // Ensure we have a fresh line for the 'end' keyword
+          if (!Line->Tokens.empty()) {
+            addUnwrappedLine();
+          }
+          Line = std::make_unique<UnwrappedLine>();
+          Line->Level = BaselineLevel; // 'end' keyword at type declaration level
           
           // Parse 'end'
           if (FormatTok && FormatTok->is(Keywords.kw_pascal_end)) {

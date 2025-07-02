@@ -953,6 +953,35 @@ private:
       return Previous->endsSequenceInternal(K1, Tokens...);
     return is(K1) && Previous && Previous->endsSequenceInternal(Tokens...);
   }
+
+public:
+  /// Debug function to show all FormatToken properties
+  std::string toDebugString() const {
+    std::string result;
+    result += "FormatToken{";
+    result += "Text='" + TokenText.str() + "'";
+    result += ", Kind=" + std::string(Tok.getName());
+    result += ", Type=" + std::to_string(static_cast<int>(Type));
+    result += ", BlockKind=" + std::to_string(static_cast<int>(BlockKind));
+    result += ", Column=" + std::to_string(OriginalColumn);
+    result += ", MustBreakBefore=" + std::string(MustBreakBefore ? "true" : "false");
+    result += ", CanBreakBefore=" + std::string(CanBreakBefore ? "true" : "false");
+    result += ", IsFirst=" + std::string(IsFirst ? "true" : "false");
+    result += ", HasUnescapedNewline=" + std::string(HasUnescapedNewline ? "true" : "false");
+    result += ", Finalized=" + std::string(Finalized ? "true" : "false");
+    if (Previous) {
+      result += ", Prev='" + Previous->TokenText.str() + "'";
+    } else {
+      result += ", Prev=null";
+    }
+    if (Next) {
+      result += ", Next='" + Next->TokenText.str() + "'";
+    } else {
+      result += ", Next=null";
+    }
+    result += "}";
+    return result;
+  }
 };
 
 class ContinuationIndenter;
