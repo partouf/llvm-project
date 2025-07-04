@@ -5539,6 +5539,17 @@ void UnwrappedLineParser::parsePascalClassContent() {
       if (FormatTok && FormatTok->is(tok::semi)) {
         nextToken();
       }
+      
+      // Parse method modifiers (virtual, abstract, override) that come after semicolon
+      while (FormatTok && FormatTok->isOneOf(Keywords.kw_pascal_virtual, 
+                                             Keywords.kw_pascal_abstract,
+                                             Keywords.kw_pascal_override)) {
+        nextToken();
+        if (FormatTok && FormatTok->is(tok::semi)) {
+          nextToken();
+        }
+      }
+      
       addUnwrappedLine();
     } else if (FormatTok->is(Keywords.kw_pascal_property)) {
       // Property declarations with configurable formatting
