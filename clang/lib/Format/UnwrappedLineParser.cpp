@@ -1573,6 +1573,11 @@ void UnwrappedLineParser::parseStructuralElement(
       parsePascalProcedureDeclaration();
       return;
     }
+    // Handle Pascal if...then...else statements
+    if (FormatTok->is(tok::kw_if)) {
+      parsePascalIfThenElse();
+      return;
+    }
     // PHASE 2: Handle Pascal var keyword context-aware
     if (FormatTok->is(Keywords.kw_pascal_var) || FormatTok->TokenText == "var") {
       // Check if this is an inline var (marked in Phase 1)
@@ -5277,6 +5282,19 @@ void UnwrappedLineParser::parsePascalProcedureDeclaration() {
   // Parse semicolon after declaration
   if (FormatTok && FormatTok->is(tok::semi)) {
     nextToken();
+    
+    // Check for Pascal method modifiers after semicolon (override, virtual, abstract, etc.)
+    while (FormatTok && !eof() && 
+           FormatTok->isOneOf(Keywords.kw_pascal_override, Keywords.kw_pascal_virtual, 
+                             Keywords.kw_pascal_abstract, Keywords.kw_pascal_overload,
+                             Keywords.kw_pascal_inline)) {
+      nextToken();
+      // Parse another semicolon if present after the modifier
+      if (FormatTok && FormatTok->is(tok::semi)) {
+        nextToken();
+      }
+    }
+    
     addUnwrappedLine();
   }
 
@@ -5527,7 +5545,8 @@ void UnwrappedLineParser::parsePascalClassContent() {
       nextToken();
       addUnwrappedLine();
       ++Line->Level;
-    } else if (FormatTok->isOneOf(Keywords.kw_pascal_function, Keywords.kw_pascal_procedure)) {
+    } else if (FormatTok->isOneOf(Keywords.kw_pascal_function, Keywords.kw_pascal_procedure,
+                                   Keywords.kw_pascal_constructor, Keywords.kw_pascal_destructor)) {
       // Parse function/procedure declaration (class may have body in implementation)
       while (FormatTok && !eof() && !FormatTok->is(tok::semi)) {
         if (FormatTok->is(tok::l_paren)) {
@@ -5543,7 +5562,9 @@ void UnwrappedLineParser::parsePascalClassContent() {
       // Parse method modifiers (virtual, abstract, override) that come after semicolon
       while (FormatTok && FormatTok->isOneOf(Keywords.kw_pascal_virtual, 
                                              Keywords.kw_pascal_abstract,
-                                             Keywords.kw_pascal_override)) {
+                                             Keywords.kw_pascal_override,
+                                             Keywords.kw_pascal_overload,
+                                             Keywords.kw_pascal_inline)) {
         nextToken();
         if (FormatTok && FormatTok->is(tok::semi)) {
           nextToken();
@@ -5597,6 +5618,74 @@ void UnwrappedLineParser::parsePascalClassContent() {
         nextToken();
         addUnwrappedLine();
       }
+    }
+  }
+}
+
+void UnwrappedLineParser::parsePascalIfThenElse() {
+  // Pascal if...then...else parsing that preserves token chains
+  assert(FormatTok->is(tok::kw_if));
+  
+  // Parse the entire if condition to preserve token chain
+  // This prevents 'not' from being disconnected from following tokens
+  while (FormatTok && !eof()) {
+    if (FormatTok->is(Keywords.kw_pascal_then)) {
+      nextToken(); // consume 'then'
+      
+      // Parse the then clause - just parse until we hit 'else' or end of statement
+      // Don't use parseUnbracedBody as it consumes too much for Pascal
+      addUnwrappedLine();
+      ++Line->Level;
+      
+      // Parse tokens until we find 'else' or reach end of statement
+      while (FormatTok && !eof() && 
+             !FormatTok->is(Keywords.kw_pascal_else) && 
+             !FormatTok->is(tok::semi) &&
+             !FormatTok->is(tok::r_brace)) {
+        nextToken();
+      }
+      
+      // If we hit a semicolon, consume it as part of the then clause
+      if (FormatTok && FormatTok->is(tok::semi)) {
+        nextToken();
+      }
+      
+      // Add the line with the then statement
+      if (!Line->Tokens.empty()) {
+        addUnwrappedLine();
+      }
+      --Line->Level;
+      
+      // Check for else clause
+      if (FormatTok && FormatTok->is(Keywords.kw_pascal_else)) {
+        nextToken(); // consume 'else'
+        
+        // Parse the else clause - same approach as then clause
+        addUnwrappedLine();
+        ++Line->Level;
+        
+        // Parse tokens until we reach end of statement
+        while (FormatTok && !eof() && 
+               !FormatTok->is(tok::semi) &&
+               !FormatTok->is(tok::r_brace)) {
+          nextToken();
+        }
+        
+        // If we hit a semicolon, consume it as part of the else clause
+        if (FormatTok && FormatTok->is(tok::semi)) {
+          nextToken();
+        }
+        
+        // Add the line with the else statement
+        if (!Line->Tokens.empty()) {
+          addUnwrappedLine();
+        }
+        --Line->Level;
+      }
+      
+      break;
+    } else {
+      nextToken();
     }
   }
 }

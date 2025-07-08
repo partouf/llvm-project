@@ -5491,6 +5491,9 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   
   // Pascal-specific spacing rules
   if (Style.isPascal()) {
+    // No space between function names and opening parentheses
+    if (Left.is(tok::identifier) && Right.is(tok::l_paren))
+      return false;
     // No space between end and . (end.)
     if (Left.is(tok::r_brace) && Right.is(tok::period))
       return false;
@@ -5786,6 +5789,42 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     if (Right.isOneOf(Keywords.kw_pascal_private, Keywords.kw_pascal_public,
                       Keywords.kw_pascal_protected, Keywords.kw_pascal_published)) {
       return true;
+    }
+    
+    // Always break before 'else' keyword
+    if (Right.is(Keywords.kw_pascal_else)) {
+      return true;
+    }
+    
+    // Always break after 'then' keyword
+    if (Left.is(Keywords.kw_pascal_then)) {
+      return true;
+    }
+    
+    // Always break after 'else' keyword unless followed by 'if'
+    if (Left.is(Keywords.kw_pascal_else) && !Right.is(tok::kw_if)) {
+      return true;
+    }
+    
+    // Never break after Pascal logical operators like 'not'
+    if (Left.is(Keywords.kw_pascal_not) || Left.TokenText == "not") {
+      return false;
+    }
+    
+    // Special handling for tokens that follow 'not' - prevent newlines
+    if (Left.Previous && Left.Previous->TokenText == "not") {
+      return false;
+    }
+    
+    // Never break before a token that follows 'not' directly
+    if (Right.Previous && Right.Previous->TokenText == "not") {
+      return false;
+    }
+    
+    // Never break before binary comparison operators in Pascal
+    if (Right.isOneOf(tok::greater, tok::less, tok::greaterequal, tok::lessequal, 
+                      tok::equalequal, tok::exclaimequal)) {
+      return false;
     }
     
     // PHASE 3: Pascal inline variable break prevention
@@ -6273,6 +6312,27 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     // Never break dotted identifiers in Pascal (e.g., System.SysUtils)
     if ((Left.is(tok::identifier) && Right.is(tok::period)) ||
         (Left.is(tok::period) && Right.is(tok::identifier))) {
+      return false;
+    }
+    
+    // Check if left is 'not' by token text
+    if (Left.TokenText == "not") {
+      return false;
+    }
+    
+    // Never break after Pascal logical operators like 'not'
+    if (Left.is(Keywords.kw_pascal_not)) {
+      return false;
+    }
+    
+    // Never break before a token that follows 'not' directly
+    if (Right.Previous && Right.Previous->TokenText == "not") {
+      return false;
+    }
+    
+    // Never break before binary comparison operators in Pascal
+    if (Right.isOneOf(tok::greater, tok::less, tok::greaterequal, tok::lessequal, 
+                      tok::equalequal, tok::exclaimequal)) {
       return false;
     }
   }

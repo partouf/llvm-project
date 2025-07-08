@@ -1334,6 +1334,20 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     return State.FirstIndent;
   }
 
+  // Pascal-specific indentation for if-then-else constructs
+  if (Style.isPascal()) {
+    // After 'then' keyword, indent the statement
+    if (PreviousNonComment && PreviousNonComment->is(Keywords.kw_pascal_then)) {
+      return CurrentState.Indent + Style.IndentWidth;
+    }
+    
+    // After 'else' keyword (but not 'else if'), indent the statement
+    if (PreviousNonComment && PreviousNonComment->is(Keywords.kw_pascal_else) &&
+        !Current.is(tok::kw_if)) {
+      return CurrentState.Indent + Style.IndentWidth;
+    }
+  }
+
   if (Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths &&
       State.Line->First->is(tok::kw_enum)) {
     return (Style.IndentWidth * State.Line->First->IndentLevel) +

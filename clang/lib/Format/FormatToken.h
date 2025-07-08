@@ -1370,9 +1370,10 @@ struct AdditionalKeywords {
     kw_pascal_except = &IdentTable.get("except");
     kw_pascal_on = &IdentTable.get("on");
     kw_pascal_mod = &IdentTable.get("mod");
+    kw_pascal_div = &IdentTable.get("div");
+    kw_pascal_not = &IdentTable.get("not");
     kw_pascal_new = &IdentTable.get("new");
     kw_pascal_dispose = &IdentTable.get("dispose");
-    kw_pascal_div = &IdentTable.get("div");
     kw_pascal_class = &IdentTable.get("class");
     kw_pascal_operator = &IdentTable.get("operator");
     kw_pascal_property = &IdentTable.get("property");
@@ -1514,9 +1515,10 @@ struct AdditionalKeywords {
         kw_pascal_except,
         kw_pascal_on,
         kw_pascal_mod,
+        kw_pascal_div,
+        kw_pascal_not,
         kw_pascal_new,
         kw_pascal_dispose,
-        kw_pascal_div,
         kw_pascal_class,
         kw_pascal_operator,
         kw_pascal_property,
@@ -1836,6 +1838,7 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_pascal_new;
   IdentifierInfo *kw_pascal_dispose;
   IdentifierInfo *kw_pascal_div;
+  IdentifierInfo *kw_pascal_not;
   IdentifierInfo *kw_pascal_class;
   IdentifierInfo *kw_pascal_operator;
   IdentifierInfo *kw_pascal_property;
