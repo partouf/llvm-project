@@ -1608,6 +1608,11 @@ void UnwrappedLineParser::parseStructuralElement(
       parsePascalIfThenElse();
       return;
     }
+    // Handle Pascal exception handling (try/except/finally)
+    if (FormatTok->is(Keywords.kw_pascal_try)) {
+      parsePascalTryExcept();
+      return;
+    }
     // PHASE 2: Handle Pascal var keyword context-aware
     if (FormatTok->is(Keywords.kw_pascal_var) || FormatTok->TokenText == "var") {
       // Check if this is an inline var (marked in Phase 1)
@@ -5791,6 +5796,120 @@ void UnwrappedLineParser::parsePascalAnonymousFunction() {
     parseBlockPascal();
     // Restore level for subsequent statements
     Line->Level = SavedLevel;
+  }
+}
+
+void UnwrappedLineParser::parsePascalTryExcept() {
+  // Pascal try/except/finally parsing
+  assert(FormatTok->is(Keywords.kw_pascal_try));
+  
+  // Consume 'try' and add to line
+  nextToken();
+  addUnwrappedLine();
+  
+  // Parse try block content with indentation
+  ++Line->Level;
+  while (FormatTok && !eof() &&
+         !FormatTok->isOneOf(Keywords.kw_pascal_except, Keywords.kw_pascal_finally)) {
+    if (FormatTok->is(Keywords.kw_pascal_begin)) {
+      parseBlockPascal();
+    } else {
+      parseStructuralElement();
+    }
+  }
+  --Line->Level;
+  
+  // Handle except block
+  if (FormatTok && FormatTok->is(Keywords.kw_pascal_except)) {
+    nextToken(); // consume 'except'
+    addUnwrappedLine();
+    
+    // Parse exception handlers with indentation
+    ++Line->Level;
+    while (FormatTok && !eof() &&
+           !FormatTok->isOneOf(Keywords.kw_pascal_finally, Keywords.kw_pascal_end)) {
+      // Handle 'on' exception handlers
+      if (FormatTok->is(Keywords.kw_pascal_on)) {
+        // Parse 'on E: ExceptionType do'
+        while (FormatTok && !eof() && !FormatTok->is(Keywords.kw_pascal_do)) {
+          nextToken();
+        }
+        if (FormatTok && FormatTok->is(Keywords.kw_pascal_do)) {
+          nextToken(); // consume 'do'
+          addUnwrappedLine();
+          
+          // Parse handler content
+          if (FormatTok && FormatTok->is(Keywords.kw_pascal_begin)) {
+            parseBlockPascal();
+          } else {
+            // Single statement handler - parse until semicolon with indentation
+            ++Line->Level;
+            while (FormatTok && !eof() && !FormatTok->is(tok::semi)) {
+              nextToken();
+            }
+            if (FormatTok && FormatTok->is(tok::semi)) {
+              nextToken(); // consume semicolon
+            }
+            addUnwrappedLine();
+            --Line->Level;
+          }
+        }
+      } else if (FormatTok->is(Keywords.kw_pascal_else)) {
+        // Handle 'else' clause in except block
+        nextToken(); // consume 'else'
+        addUnwrappedLine();
+        
+        // Parse else content until 'end' with indentation
+        ++Line->Level;
+        while (FormatTok && !eof() && !FormatTok->is(Keywords.kw_pascal_end)) {
+          if (FormatTok->is(Keywords.kw_pascal_begin)) {
+            parseBlockPascal();
+          } else {
+            // Parse single statement with current indentation
+            while (FormatTok && !eof() && 
+                   !FormatTok->is(tok::semi) && 
+                   !FormatTok->is(Keywords.kw_pascal_end)) {
+              nextToken();
+            }
+            if (FormatTok && FormatTok->is(tok::semi)) {
+              nextToken(); // consume semicolon
+            }
+            addUnwrappedLine();
+            break; // Only parse one statement for else
+          }
+        }
+        --Line->Level;
+      } else {
+        parseStructuralElement();
+      }
+    }
+    --Line->Level;
+  }
+  
+  // Handle finally block
+  if (FormatTok && FormatTok->is(Keywords.kw_pascal_finally)) {
+    nextToken(); // consume 'finally'
+    addUnwrappedLine();
+    
+    // Parse finally block content with indentation
+    ++Line->Level;
+    while (FormatTok && !eof() && !FormatTok->is(Keywords.kw_pascal_end)) {
+      if (FormatTok->is(Keywords.kw_pascal_begin)) {
+        parseBlockPascal();
+      } else {
+        parseStructuralElement();
+      }
+    }
+    --Line->Level;
+  }
+  
+  // Consume closing 'end'
+  if (FormatTok && FormatTok->is(Keywords.kw_pascal_end)) {
+    nextToken();
+    if (FormatTok && FormatTok->is(tok::semi)) {
+      nextToken(); // consume semicolon
+    }
+    addUnwrappedLine();
   }
 }
 
