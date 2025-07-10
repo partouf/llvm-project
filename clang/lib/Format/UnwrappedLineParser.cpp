@@ -2194,6 +2194,14 @@ void UnwrappedLineParser::parseStructuralElement(
 
       SeenEqual = true;
       nextToken();
+      
+      // Pascal anonymous function/procedure detection
+      if (Style.isPascal() && 
+          FormatTok->isOneOf(Keywords.kw_pascal_function, Keywords.kw_pascal_procedure)) {
+        parsePascalAnonymousFunction();
+        break;
+      }
+      
       if (FormatTok->is(tok::l_brace)) {
         // Block kind should probably be set to BK_BracedInit for any language.
         // C# needs this change to ensure that array initialisers and object
@@ -5687,6 +5695,44 @@ void UnwrappedLineParser::parsePascalIfThenElse() {
     } else {
       nextToken();
     }
+  }
+}
+
+void UnwrappedLineParser::parsePascalAnonymousFunction() {
+  // Pascal anonymous function/procedure parsing
+  assert(FormatTok->isOneOf(Keywords.kw_pascal_function, Keywords.kw_pascal_procedure));
+  
+  bool isFunction = FormatTok->is(Keywords.kw_pascal_function);
+  nextToken(); // consume 'function' or 'procedure'
+  
+  // Parse optional parameters
+  if (FormatTok && FormatTok->is(tok::l_paren)) {
+    parseParens();
+  }
+  
+  // Parse optional return type for functions
+  if (isFunction && FormatTok && FormatTok->is(tok::colon)) {
+    nextToken(); // consume ':'
+    // Skip return type
+    while (FormatTok && !eof() && 
+           !FormatTok->is(Keywords.kw_pascal_begin) &&
+           !FormatTok->is(tok::semi)) {
+      nextToken();
+    }
+  }
+  
+  // Now we should be at 'begin' - parse the block
+  if (FormatTok && FormatTok->is(Keywords.kw_pascal_begin)) {
+    // Force a line break before begin
+    addUnwrappedLine();
+    // Save current level
+    const unsigned SavedLevel = Line->Level;
+    // Add extra indentation level for anonymous function content
+    ++Line->Level;
+    // Parse the begin/end block 
+    parseBlockPascal();
+    // Restore level for subsequent statements
+    Line->Level = SavedLevel;
   }
 }
 

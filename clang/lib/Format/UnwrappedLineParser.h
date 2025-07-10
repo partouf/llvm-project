@@ -217,6 +217,7 @@ private:
   void parsePascalInterfaceContent();
   void parsePascalClassContent();
   void parsePascalIfThenElse();
+  void parsePascalAnonymousFunction();
 
   // Used by addUnwrappedLine to denote whether to keep or remove a level
   // when resetting the line state.
