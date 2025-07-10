@@ -5773,6 +5773,51 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       return true;
     }
     
+    // Always break before Pascal attributes (but not nested brackets within attributes)
+    if (Right.is(tok::l_square)) {
+      // Don't break if we're already at the start of a line
+      if (Left.is(tok::comment) || Left.NewlinesBefore > 0) {
+        return false;
+      }
+      
+      // Don't break nested brackets within attributes
+      // Check if we're inside an attribute by looking for unmatched opening bracket
+      int bracketDepth = 0;
+      const FormatToken *Current = &Left;
+      while (Current && Current->isNot(tok::semi) && Current->isNot(tok::l_brace)) {
+        if (Current->is(tok::l_square)) bracketDepth++;
+        if (Current->is(tok::r_square)) bracketDepth--;
+        Current = Current->Previous;
+      }
+      if (bracketDepth > 0) {
+        return false; // We're inside an attribute already
+      }
+      
+      // Check if this is an attribute (not array access)
+      const FormatToken *NextToken = Right.Next;
+      if (NextToken && NextToken->is(tok::identifier)) {
+        // Look ahead to see if this looks like an attribute
+        const FormatToken *AfterIdent = NextToken->Next;
+        if (AfterIdent && (AfterIdent->is(tok::r_square) || 
+                          AfterIdent->is(tok::l_paren))) {
+          return true;
+        }
+      }
+    }
+    
+    // Always break after closing attribute bracket before declarations
+    if (Left.is(tok::r_square) && Right.isOneOf(tok::identifier, 
+                                                Keywords.kw_pascal_function,
+                                                Keywords.kw_pascal_procedure,
+                                                Keywords.kw_pascal_property,
+                                                Keywords.kw_pascal_class)) {
+      // Check if Left is part of an attribute by looking backward
+      const FormatToken *AttrStart = Left.MatchingParen;
+      if (AttrStart && AttrStart->is(tok::l_square)) {
+        return true;
+      }
+    }
+    
     // Never break Pascal unit/program names
     if (Left.is(TT_PascalUnitName) || Right.is(TT_PascalUnitName)) {
       return false;

@@ -1334,17 +1334,20 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     return State.FirstIndent;
   }
 
-  // Pascal-specific indentation for if-then-else constructs
+  // Pascal-specific indentation
   if (Style.isPascal()) {
-    // After 'then' keyword, indent the statement
-    if (PreviousNonComment && PreviousNonComment->is(Keywords.kw_pascal_then)) {
-      return CurrentState.Indent + Style.IndentWidth;
+    // After Pascal attributes, don't use continuation indentation
+    const FormatToken *Prev = Current.Previous;
+    while (Prev && (Prev->is(tok::comment) || Prev->isTrailingComment())) {
+      Prev = Prev->Previous;
     }
-    
-    // After 'else' keyword (but not 'else if'), indent the statement
-    if (PreviousNonComment && PreviousNonComment->is(Keywords.kw_pascal_else) &&
-        !Current.is(tok::kw_if)) {
-      return CurrentState.Indent + Style.IndentWidth;
+    if (Prev && Prev->is(tok::r_square)) {
+      // Check if this was an attribute by looking for matching l_square
+      const FormatToken *AttrStart = Prev->MatchingParen;
+      if (AttrStart && AttrStart->is(tok::l_square)) {
+        // This line follows an attribute, don't use continuation indentation
+        return CurrentState.Indent;
+      }
     }
   }
 
