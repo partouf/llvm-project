@@ -925,13 +925,16 @@ FormatToken *UnwrappedLineParser::parseBlockPascal() {
   
   const unsigned InitialLevel = Line->Level;
   
+  // If there are tokens before 'begin' on this line, end the line first
+  if (!Line->Tokens.empty()) {
+    addUnwrappedLine();
+  }
+  
   // Consume 'begin' and add to line
   nextToken();
   
-  // If begin is not alone on the line, break after it
-  if (CommentsBeforeNextToken.empty()) {
-    addUnwrappedLine();
-  }
+  // Always break after 'begin' to ensure it's on its own line
+  addUnwrappedLine();
   
   // Increase level for block content (like C++ parseBlock)
   ++Line->Level;
@@ -1549,6 +1552,33 @@ void UnwrappedLineParser::parseStructuralElement(
         nextToken();
         return;
       }
+    }
+    // Handle Pascal initialization/finalization sections
+    if (FormatTok->is(Keywords.kw_pascal_initialization) ||
+        FormatTok->is(Keywords.kw_pascal_finalization)) {
+      FormatTok->setFinalizedType(TT_PascalSectionStart);
+      nextToken();
+      addUnwrappedLine();
+      
+      // Parse initialization/finalization content with indentation
+      ++Line->Level;
+      while (FormatTok && !eof() &&
+             !FormatTok->isOneOf(Keywords.kw_pascal_finalization, 
+                                 Keywords.kw_pascal_initialization)) {
+        // Handle begin blocks specifically to ensure proper formatting
+        if (FormatTok->is(Keywords.kw_pascal_begin)) {
+          parseBlockPascal();
+        } else if (FormatTok->is(Keywords.kw_pascal_end) && 
+                   Tokens->peekNextToken() && 
+                   Tokens->peekNextToken()->is(tok::period)) {
+          // This is 'end.' - end of unit, stop parsing section content
+          break;
+        } else {
+          parseStructuralElement();
+        }
+      }
+      --Line->Level;
+      return;
     }
     if (FormatTok->is(Keywords.kw_pascal_begin)) {
       FormatTok->setFinalizedType(TT_PascalBegin);
@@ -5239,9 +5269,9 @@ void UnwrappedLineParser::parsePascalVarDeclaration() {
   // Parse variable declarations until we hit a keyword that ends the section
   while (FormatTok && !eof() &&
          !FormatTok->isOneOf(Keywords.kw_pascal_begin, Keywords.kw_pascal_procedure,
-                             Keywords.kw_pascal_function, Keywords.kw_pascal_var,
-                             Keywords.kw_pascal_const, Keywords.kw_pascal_type,
-                             Keywords.kw_pascal_implementation)) {
+                             Keywords.kw_pascal_function, Keywords.kw_pascal_class,
+                             Keywords.kw_pascal_var, Keywords.kw_pascal_const, 
+                             Keywords.kw_pascal_type, Keywords.kw_pascal_implementation)) {
     if (FormatTok->is(tok::identifier)) {
       // Parse variable name(s)
       while (FormatTok && !FormatTok->is(tok::colon) && !FormatTok->is(tok::equal)) {
@@ -5643,14 +5673,25 @@ void UnwrappedLineParser::parsePascalIfThenElse() {
       // Parse the then clause - just parse until we hit 'else' or end of statement
       // Don't use parseUnbracedBody as it consumes too much for Pascal
       addUnwrappedLine();
-      ++Line->Level;
+      
+      // Check if the then clause starts with 'begin' - if so, don't indent
+      bool hasBeginBlock = (FormatTok && FormatTok->is(Keywords.kw_pascal_begin));
+      
+      if (!hasBeginBlock) {
+        ++Line->Level;
+      }
       
       // Parse tokens until we find 'else' or reach end of statement
       while (FormatTok && !eof() && 
              !FormatTok->is(Keywords.kw_pascal_else) && 
              !FormatTok->is(tok::semi) &&
              !FormatTok->is(tok::r_brace)) {
-        nextToken();
+        // Handle begin blocks specially in then clause
+        if (FormatTok->is(Keywords.kw_pascal_begin)) {
+          parseBlockPascal();
+        } else {
+          nextToken();
+        }
       }
       
       // If we hit a semicolon, consume it as part of the then clause
@@ -5662,7 +5703,10 @@ void UnwrappedLineParser::parsePascalIfThenElse() {
       if (!Line->Tokens.empty()) {
         addUnwrappedLine();
       }
-      --Line->Level;
+      
+      if (!hasBeginBlock) {
+        --Line->Level;
+      }
       
       // Check for else clause
       if (FormatTok && FormatTok->is(Keywords.kw_pascal_else)) {
@@ -5670,13 +5714,24 @@ void UnwrappedLineParser::parsePascalIfThenElse() {
         
         // Parse the else clause - same approach as then clause
         addUnwrappedLine();
-        ++Line->Level;
+        
+        // Check if the else clause starts with 'begin' - if so, don't indent
+        bool hasBeginBlock = (FormatTok && FormatTok->is(Keywords.kw_pascal_begin));
+        
+        if (!hasBeginBlock) {
+          ++Line->Level;
+        }
         
         // Parse tokens until we reach end of statement
         while (FormatTok && !eof() && 
                !FormatTok->is(tok::semi) &&
                !FormatTok->is(tok::r_brace)) {
-          nextToken();
+          // Handle begin blocks specially in else clause
+          if (FormatTok->is(Keywords.kw_pascal_begin)) {
+            parseBlockPascal();
+          } else {
+            nextToken();
+          }
         }
         
         // If we hit a semicolon, consume it as part of the else clause
@@ -5688,7 +5743,10 @@ void UnwrappedLineParser::parsePascalIfThenElse() {
         if (!Line->Tokens.empty()) {
           addUnwrappedLine();
         }
-        --Line->Level;
+        
+        if (!hasBeginBlock) {
+          --Line->Level;
+        }
       }
       
       break;
