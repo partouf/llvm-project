@@ -5492,11 +5492,18 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   // Pascal-specific spacing rules
   if (Style.isPascal()) {
     // No space between function names and opening parentheses
-    if (Left.is(tok::identifier) && Right.is(tok::l_paren))
+    // Exception: Pascal boolean operators need spaces
+    if (Left.is(tok::identifier) && Right.is(tok::l_paren) &&
+        !Left.isOneOf(Keywords.kw_pascal_and, Keywords.kw_pascal_or, Keywords.kw_pascal_xor))
       return false;
     // No space between end and . (end.)
     if (Left.is(tok::r_brace) && Right.is(tok::period))
       return false;
+    // Space around Pascal boolean operators (and, or, xor)
+    if (Left.isOneOf(Keywords.kw_pascal_and, Keywords.kw_pascal_or, Keywords.kw_pascal_xor))
+      return true;
+    if (Right.isOneOf(Keywords.kw_pascal_and, Keywords.kw_pascal_or, Keywords.kw_pascal_xor))
+      return true;
   }
   
   // Do not merge "- -" into "--".

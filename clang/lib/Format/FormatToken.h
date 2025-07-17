@@ -1394,6 +1394,30 @@ struct AdditionalKeywords {
     kw_pascal_private = &IdentTable.get("private");
     kw_pascal_protected = &IdentTable.get("protected");
     kw_pascal_published = &IdentTable.get("published");
+    kw_pascal_and = &IdentTable.get("and");
+    kw_pascal_or = &IdentTable.get("or");
+    kw_pascal_xor = &IdentTable.get("xor");
+    kw_pascal_shl = &IdentTable.get("shl");
+    kw_pascal_shr = &IdentTable.get("shr");
+    kw_pascal_as = &IdentTable.get("as");
+    kw_pascal_is = &IdentTable.get("is");
+    kw_pascal_in = &IdentTable.get("in");
+    kw_pascal_out = &IdentTable.get("out");
+    kw_pascal_nil = &IdentTable.get("nil");
+    kw_pascal_file = &IdentTable.get("file");
+    kw_pascal_goto = &IdentTable.get("goto");
+    kw_pascal_label = &IdentTable.get("label");
+    kw_pascal_packed = &IdentTable.get("packed");
+    kw_pascal_set = &IdentTable.get("set");
+    kw_pascal_string = &IdentTable.get("string");
+    kw_pascal_asm = &IdentTable.get("asm");
+    kw_pascal_raise = &IdentTable.get("raise");
+    kw_pascal_object = &IdentTable.get("object");
+    kw_pascal_exports = &IdentTable.get("exports");
+    kw_pascal_library = &IdentTable.get("library");
+    kw_pascal_resourcestring = &IdentTable.get("resourcestring");
+    kw_pascal_threadvar = &IdentTable.get("threadvar");
+    kw_pascal_dispinterface = &IdentTable.get("dispinterface");
 
     // Keep this at the end of the constructor to make sure everything here is
     // already initialized.
@@ -1539,6 +1563,30 @@ struct AdditionalKeywords {
         kw_pascal_private,
         kw_pascal_protected,
         kw_pascal_published,
+        kw_pascal_and,
+        kw_pascal_or,
+        kw_pascal_xor,
+        kw_pascal_shl,
+        kw_pascal_shr,
+        kw_pascal_as,
+        kw_pascal_is,
+        kw_pascal_in,
+        kw_pascal_out,
+        kw_pascal_nil,
+        kw_pascal_file,
+        kw_pascal_goto,
+        kw_pascal_label,
+        kw_pascal_packed,
+        kw_pascal_set,
+        kw_pascal_string,
+        kw_pascal_asm,
+        kw_pascal_raise,
+        kw_pascal_object,
+        kw_pascal_exports,
+        kw_pascal_library,
+        kw_pascal_resourcestring,
+        kw_pascal_threadvar,
+        kw_pascal_dispinterface,
     });
   }
 
@@ -1859,6 +1907,30 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_pascal_private;
   IdentifierInfo *kw_pascal_protected;
   IdentifierInfo *kw_pascal_published;
+  IdentifierInfo *kw_pascal_and;
+  IdentifierInfo *kw_pascal_or;
+  IdentifierInfo *kw_pascal_xor;
+  IdentifierInfo *kw_pascal_shl;
+  IdentifierInfo *kw_pascal_shr;
+  IdentifierInfo *kw_pascal_as;
+  IdentifierInfo *kw_pascal_is;
+  IdentifierInfo *kw_pascal_in;
+  IdentifierInfo *kw_pascal_out;
+  IdentifierInfo *kw_pascal_nil;
+  IdentifierInfo *kw_pascal_file;
+  IdentifierInfo *kw_pascal_goto;
+  IdentifierInfo *kw_pascal_label;
+  IdentifierInfo *kw_pascal_packed;
+  IdentifierInfo *kw_pascal_set;
+  IdentifierInfo *kw_pascal_string;
+  IdentifierInfo *kw_pascal_asm;
+  IdentifierInfo *kw_pascal_raise;
+  IdentifierInfo *kw_pascal_object;
+  IdentifierInfo *kw_pascal_exports;
+  IdentifierInfo *kw_pascal_library;
+  IdentifierInfo *kw_pascal_resourcestring;
+  IdentifierInfo *kw_pascal_threadvar;
+  IdentifierInfo *kw_pascal_dispinterface;
 
   /// Returns \c true if \p Tok is a keyword or an identifier.
   bool isWordLike(const FormatToken &Tok, bool IsVerilog = true) const {
